@@ -56,7 +56,51 @@ export default function Home() {
     {
       "message": "Hi there! How can I help?",
       "type": "apiMessage"
-    }
+    },
+    // {
+    //   "message": "Hi there! How can I help?",
+    //   "type": "userMessage"
+    // },
+    // {
+    //   "message": "Hi there! How can I help?",
+    //   "type": "apiMessage"
+    // },
+    // {
+    //   "message": "Hi there! How can I help?",
+    //   "type": "userMessage"
+    // },
+    // {
+    //   "message": "Hi there! How can I help?",
+    //   "type": "apiMessage"
+    // },
+    // {
+    //   "message": "Hi there! How can I help?",
+    //   "type": "apiMessage"
+    // },
+    // {
+    //   "message": "Hi there! How can I help?",
+    //   "type": "userMessage"
+    // },
+    // {
+    //   "message": "Hi there! How can I help?",
+    //   "type": "apiMessage"
+    // },
+    // {
+    //   "message": "Hi there! How can I help?",
+    //   "type": "userMessage"
+    // },
+    // {
+    //   "message": "Hi there! How can I help?",
+    //   "type": "apiMessage"
+    // },
+    // {
+    //   "message": "Hi there! How can I help?",
+    //   "type": "userMessage"
+    // },
+    // {
+    //   "message": "Hi there! How can I help?",
+    //   "type": "apiMessage"
+    // },
   ]);
 
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -163,14 +207,14 @@ export default function Home() {
             </Heading>
             <BitcoinIcon fontSize={{base: "4xl", md: "7xl"}} color="orange.400" />
           </Flex>
-          <Flex id="main" width="full" h="full" maxW="820px" my={5} flexDir="column" gap="4" >
-            <Box ref={messageListRef} w="full" bgColor="gray.900" borderRadius="md" flexBasis="100%" overflow="hidden">
+          <Flex id="main" width="full" h="full" maxW="820px" my={5} flexDir="column" gap="4" justifyContent="space-around" >
+            <Box ref={messageListRef} w="full" bgColor="gray.900" borderRadius="md" flex="1 1 0%" overflow="auto">
               {messages.length && messages.map((message, index) => {
                 return <MessageBox key={index} message={message} />
               })}
               {loading && <MessageLoading />}
             </Box>
-            <Box w="100%" maxW="100%">
+            <Box w="100%" maxW="100%" flex={{base: "0 0 50px", md:"0 0 100px"}} mb={{base: "70px", md: "70px"}}>
               <form onSubmit={handleSubmit} >
                 <Flex gap={2}>
                   <Textarea
