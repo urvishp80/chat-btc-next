@@ -14,6 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { BitcoinIcon, SendIcon } from "@/chakra/custom-chakra-icons";
 import BeatLoader from "react-spinners/BeatLoader"
+import {isMobile} from 'react-device-detect';
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -57,50 +58,6 @@ export default function Home() {
       "message": "Hi there! How can I help?",
       "type": "apiMessage"
     },
-    // {
-    //   "message": "Hi there! How can I help?",
-    //   "type": "userMessage"
-    // },
-    // {
-    //   "message": "Hi there! How can I help?",
-    //   "type": "apiMessage"
-    // },
-    // {
-    //   "message": "Hi there! How can I help?",
-    //   "type": "userMessage"
-    // },
-    // {
-    //   "message": "Hi there! How can I help?",
-    //   "type": "apiMessage"
-    // },
-    // {
-    //   "message": "Hi there! How can I help?",
-    //   "type": "apiMessage"
-    // },
-    // {
-    //   "message": "Hi there! How can I help?",
-    //   "type": "userMessage"
-    // },
-    // {
-    //   "message": "Hi there! How can I help?",
-    //   "type": "apiMessage"
-    // },
-    // {
-    //   "message": "Hi there! How can I help?",
-    //   "type": "userMessage"
-    // },
-    // {
-    //   "message": "Hi there! How can I help?",
-    //   "type": "apiMessage"
-    // },
-    // {
-    //   "message": "Hi there! How can I help?",
-    //   "type": "userMessage"
-    // },
-    // {
-    //   "message": "Hi there! How can I help?",
-    //   "type": "apiMessage"
-    // },
   ]);
 
   const messageListRef = useRef<HTMLDivElement>(null);
@@ -119,23 +76,16 @@ export default function Home() {
     textAreaRef.current && textAreaRef.current.focus();
   }, []);
 
+  useEffect(() => {
+    if (textAreaRef?.current) {
+      const _textarea = textAreaRef.current
+      const _length = userInput?.split("\n")?.length
+      _textarea.rows = _length > 3 ? 3 : Boolean(_length) && _length || 1
+    }
+  }, [userInput])
+
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setUserInput(e.target.value);
-  };
-
-  // Prevent blank submissions and allow for multiline input
-  const handleEnter = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && userInput) {
-      if(!e.shiftKey && userInput) {
-        handleSubmit(e);
-      }
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      // const textArea = textAreaRef.current
-      // if (textArea && textArea.rows < 3) {
-      //   textArea.rows += 1
-      // }
-    }
   };
 
   const fetchResult = async (query: string) => {
@@ -169,17 +119,30 @@ export default function Home() {
     setUserInput("")
 
     const errMessage = "Something went wrong. Try again later"
-    try {
-      const data = await fetchResult(query)
-      const answer = data?.result.run?.results[0][0]?.value?.answer
-      if (!answer) throw new Error(errMessage)
-      setMessages((prevMessages) => [...prevMessages, { "message": answer, "type": "apiMessage" }]);
-    } catch (err: any) {
-      setMessages((prevMessages) => [...prevMessages, { "message": err?.message ?? errMessage , "type": "errorMessage" }]);
-    }
+    // try {
+    //   const data = await fetchResult(query)
+    //   const answer = data?.result.run?.results[0][0]?.value?.answer
+    //   if (!answer) throw new Error(errMessage)
+    //   setMessages((prevMessages) => [...prevMessages, { "message": answer, "type": "apiMessage" }]);
+    // } catch (err: any) {
+    //   setMessages((prevMessages) => [...prevMessages, { "message": err?.message ?? errMessage , "type": "errorMessage" }]);
+    // }
     setLoading(false);
-    // setMessages((prevMessages) => [...prevMessages, { "message": errMessage, "type": "apiMessage" }]);
   }
+
+  // Prevent blank submissions and allow for multiline input
+  const handleEnter = (e: React.KeyboardEvent) => {
+    
+    if (e.key === "Enter") {
+      if (isMobile) {
+        e.preventDefault()
+      } else {
+        if(!e.shiftKey && userInput) {
+          handleSubmit(e);
+        }
+      }
+    }
+  };
 
   return (
     <>
@@ -207,16 +170,17 @@ export default function Home() {
             </Heading>
             <BitcoinIcon fontSize={{base: "4xl", md: "7xl"}} color="orange.400" />
           </Flex>
-          <Flex id="main" width="full" h="full" maxW="820px" my={5} flexDir="column" gap="4" justifyContent="space-around" >
-            <Box ref={messageListRef} w="full" bgColor="gray.900" borderRadius="md" flex="1 1 0%" overflow="auto">
+          <Flex id="main" width="full" h="full" maxW="820px" my={5} flexDir="column" gap="4" justifyContent="space-around" overflow="auto" >
+            <Box ref={messageListRef} w="full" bgColor="gray.900" borderRadius="md" flex="1 1 0%" overflow="auto" maxH="100lvh">
               {messages.length && messages.map((message, index) => {
                 return <MessageBox key={index} message={message} />
               })}
               {loading && <MessageLoading />}
             </Box>
-            <Box w="100%" maxW="100%" flex={{base: "0 0 50px", md:"0 0 100px"}} mb={{base: "70px", md: "70px"}}>
+            {/* <Box w="100%" maxW="100%" flex={{base: "0 0 50px", md:"0 0 100px"}} mb={{base: "70px", md: "70px"}}> */}
+            <Box w="100%">
               <form onSubmit={handleSubmit} >
-                <Flex gap={2}>
+                <Flex gap={2} alignItems="flex-end" >
                   <Textarea
                     ref={textAreaRef}
                     name=""
@@ -288,7 +252,7 @@ const MessageBox = ({message}: {message: Message}) => {
       <Heading color={messageConfig[type].headingColor} fontSize="sm" fontWeight={600}>
         {messageConfig[type].text}
       </Heading>
-      <Text color={messageConfig[type].color || ""} >{message.message}</Text>
+      <Text whiteSpace="pre-wrap" color={messageConfig[type].color || ""} >{message.message}</Text>
     </Flex>
   )
 }
