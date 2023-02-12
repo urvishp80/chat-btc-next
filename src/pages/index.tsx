@@ -119,14 +119,14 @@ export default function Home() {
     setUserInput("")
 
     const errMessage = "Something went wrong. Try again later"
-    // try {
-    //   const data = await fetchResult(query)
-    //   const answer = data?.result.run?.results[0][0]?.value?.answer
-    //   if (!answer) throw new Error(errMessage)
-    //   setMessages((prevMessages) => [...prevMessages, { "message": answer, "type": "apiMessage" }]);
-    // } catch (err: any) {
-    //   setMessages((prevMessages) => [...prevMessages, { "message": err?.message ?? errMessage , "type": "errorMessage" }]);
-    // }
+    try {
+      const data = await fetchResult(query)
+      const answer = data?.result.run?.results[0][0]?.value?.answer
+      if (!answer) throw new Error(errMessage)
+      setMessages((prevMessages) => [...prevMessages, { "message": answer, "type": "apiMessage" }]);
+    } catch (err: any) {
+      setMessages((prevMessages) => [...prevMessages, { "message": err?.message ?? errMessage , "type": "errorMessage" }]);
+    }
     setLoading(false);
   }
 
