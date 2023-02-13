@@ -1,9 +1,13 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import type { NextApiRequest, NextApiResponse } from 'next'
+import type { NextApiRequest, NextApiResponse, PageConfig } from 'next'
 
 // type Data = {
 //   [key]: string;
 // }
+
+export const config: PageConfig = {
+  runtime: "edge"
+}
 
 export default async function handler(
   req: NextApiRequest,
