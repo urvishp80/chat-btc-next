@@ -18,31 +18,26 @@ export default async function handler(
     body: JSON.stringify({
       "specification_hash": process.env.SPEC_HASH,
       "config": {
-        "MODEL_SUMMARIZE":{
-            "provider_id":"openai",
-            "model_id":"text-davinci-002",
-            "use_cache":true
+        "MODEL_SUMMARIZE": {
+          "provider_id":"openai",
+          "model_id":"text-davinci-002",
+          "use_cache":true
         },
-        "WEBCONTENT":{
-            "provider_id":"browserlessapi",
-            "use_cache":true,
-            "error_as_output":false
+        "ES_SEARCH": {
+          "use_cache":true
         },
-        "GOOGLE_CUSTOM_SEARCH":{
-            "use_cache":true
-        },
-        "MODEL_ANSWER_WITH_REFS":{
-            "provider_id":"openai",
-            "model_id":"text-davinci-002",
-            "use_cache":true
+        "MODEL_ANSWER_WITH_REFS": {
+          "provider_id":"openai",
+          "model_id":"text-davinci-002",
+          "use_cache":true
         }
       },
-      stream: false,
       blocking: true,
       inputs: req.body.inputs,
     }),
   });
 
   const data = await response.json();
+  console.log(data)
   res.status(200).json({ result: data })
 }
