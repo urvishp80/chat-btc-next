@@ -1,5 +1,6 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse, PageConfig } from 'next'
+import { log } from 'next-axiom'
 
 // type Data = {
 //   [key]: string;
@@ -42,6 +43,7 @@ export default async function handler(
   });
 
   const data = await response.json();
+  log.info("Edge Function: ", {response, data})
   console.log(data)
   res.status(200).json({ result: data })
 }
