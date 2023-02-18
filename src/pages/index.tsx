@@ -182,9 +182,9 @@ export default function Home() {
             >
               {messages.length &&
                 messages.map((message, index) => {
-                  return <MessageBox key={index} message={message} />;
+                  return <MessageBox key={index} content={message} />;
                 })}
-              {loading && <MessageBox message={{type: "apiMessage"}} />}
+              {loading && <MessageBox content={{message: " ", type: "apiMessage"}} isLoading />}
             </Box>
             {/* <Box w="100%" maxW="100%" flex={{base: "0 0 50px", md:"0 0 100px"}} mb={{base: "70px", md: "70px"}}> */}
             <Box w="100%">

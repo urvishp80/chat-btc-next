@@ -1,8 +1,9 @@
-import { Flex, Heading, Text } from "@chakra-ui/react";
+import { Box, Flex, Heading, Text } from "@chakra-ui/react";
 import { BeatLoader } from "react-spinners";
+import styles from "./message.module.css"
 
 export interface Message {
-  message?: string;
+  message: string;
   type: "userMessage" | "apiMessage" | "errorMessage";
 }
 const messageConfig = {
@@ -27,13 +28,18 @@ const messageConfig = {
 };
 
 const MessageBox = ({
-  message,
+  content,
   isLoading,
 }: {
-  message: Message;
+  content: Message;
   isLoading?: boolean;
 }) => {
-  const type = message.type;
+  const {message, type} = content
+
+  // const bodyRegex = /^\[\d+\]:/gm
+  // const urlRegex = /^\[\d+\]:(.*)/gm
+  // const messageLinks = message?.match(urlRegex)
+  
   return (
     <Flex
       flexDir="column"
@@ -55,12 +61,39 @@ const MessageBox = ({
       {isLoading ? (
         <BeatLoader color="white" />
       ) : (
-        <Text whiteSpace="pre-wrap" color={messageConfig[type].color || ""}>
-          {message.message}
-        </Text>
+        <MessageContent message={message} type={type} />
       )}
     </Flex>
   );
 };
 
 export default MessageBox;
+
+const MessageContent = ({message, type}: Message) => {
+  const splitRegex = /(^\[\d+\]:\s.*)/gm
+  const chunks = message?.split(splitRegex).filter(value => (value.length>1))
+  const messageBody = chunks[0]
+  const messageLinks = chunks.slice(1)
+
+  const ClickableLink = ({linkString}: {linkString: string}) => {
+    let url = linkString.split(" ")[1].trim()
+    return <a href={url} target="_blank" rel="noreferrer" className={styles.reference_link}>{linkString}</a>
+  }
+
+  if (!chunks) return null
+
+  return (
+    <>
+      <Text whiteSpace="pre-wrap" color={messageConfig[type].color || ""}>
+        {messageBody}
+      </Text>
+      <Box>
+        {messageLinks.map((link, idx) => (
+          <div key={idx}>
+            <ClickableLink linkString={link} />
+          </div>
+        ))}
+      </Box>
+    </>
+  )
+}
