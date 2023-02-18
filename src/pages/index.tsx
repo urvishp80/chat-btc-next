@@ -1,7 +1,7 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import { Inter } from '@next/font/google'
-import styles from '@/styles/Home.module.css'
+import Head from "next/head";
+import Image from "next/image";
+import { Inter } from "@next/font/google";
+import styles from "@/styles/Home.module.css";
 import { useEffect, useRef, useState } from "react";
 import {
   Box,
@@ -9,30 +9,14 @@ import {
   Flex,
   Heading,
   IconButton,
-  Text,
   Textarea,
 } from "@chakra-ui/react";
 import { BitcoinIcon, SendIcon } from "@/chakra/custom-chakra-icons";
-import BeatLoader from "react-spinners/BeatLoader"
-import {isMobile} from 'react-device-detect';
+import { isMobile } from "react-device-detect";
+import MessageBox, { Message } from "@/components/message/message";
+import { defaultErrorMessage, getErrorByBlockIndex } from "@/config/error-config";
 
-const inter = Inter({ subsets: ['latin'] })
-
-interface Message {
-  message: string,
-  type: "userMessage" | "apiMessage" | "errorMessage"
-}
-
-const errorMessagesByBlock = [
-  "Something went wrong. Try again later",
-  "Something went wrong. Try again later",
-  "Something went wrong. Try again later",
-  "We can't answer that question, try rephrasing your question",
-  "Something went wrong. Try again later",
-  "Something went wrong. Try again later",
-]
-
-const defaultErrorMessage = "Something went wrong. Try again later"
+const inter = Inter({ subsets: ["latin"] });
 
 export default function Home() {
   const [userInput, setUserInput] = useState("");
@@ -40,8 +24,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
-      "message": "Hi there! How can I help?",
-      "type": "apiMessage"
+      message: "Hi there! How can I help?",
+      type: "apiMessage",
     },
   ]);
 
@@ -63,11 +47,11 @@ export default function Home() {
 
   useEffect(() => {
     if (textAreaRef?.current) {
-      const _textarea = textAreaRef.current
-      const _length = userInput?.split("\n")?.length
-      _textarea.rows = _length > 3 ? 3 : Boolean(_length) && _length || 1
+      const _textarea = textAreaRef.current;
+      const _length = userInput?.split("\n")?.length;
+      _textarea.rows = _length > 3 ? 3 : (Boolean(_length) && _length) || 1;
     }
-  }, [userInput])
+  }, [userInput]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setUserInput(e.target.value);
@@ -86,48 +70,58 @@ export default function Home() {
           },
         ],
       }),
-    })
-    const data = await response.json()
-    console.log(data)
+    });
+    const data = await response.json();
+    console.log(data);
     return data;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const query = userInput.trim()
+    e.preventDefault();
+    const query = userInput.trim();
     if (query === "") {
       return;
     }
 
     setLoading(true);
-    setMessages((prevMessages) => [...prevMessages, { "message": userInput, "type": "userMessage" }]);
-    setUserInput("")
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { message: userInput, type: "userMessage" },
+    ]);
+    setUserInput("");
 
     try {
-      const data = await fetchResult(query)
-      const results = data?.result.run?.results
-      const answer = (results && results[0][0]?.value?.answer) ?? ""
+      const data = await fetchResult(query);
+      const results = data?.result.run?.results;
+      const answer = (results && results[0][0]?.value?.answer) ?? "";
       if (!answer) {
-        const block_error_index = data?.result?.run?.status?.blocks?.findIndex((block: {[key: string]: string | number}) => block.status === "errored")
-        const errMessage = (block_error_index && block_error_index !== -1) ? errorMessagesByBlock[block_error_index] : defaultErrorMessage
-        // below, defaultErrorMessage is a safeguard for future changes to number of blocks that errorMessages may not contain 
-        throw new Error(errMessage ?? defaultErrorMessage)
+        const block_error_index = data?.result?.run?.status?.blocks?.findIndex(
+          (block: { [key: string]: string | number }) =>
+            block.status === "errored"
+        );
+        const errMessage = getErrorByBlockIndex(block_error_index)
+        throw new Error(errMessage ?? defaultErrorMessage);
       }
-      setMessages((prevMessages) => [...prevMessages, { "message": answer, "type": "apiMessage" }]);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { message: answer, type: "apiMessage" },
+      ]);
     } catch (err: any) {
-      setMessages((prevMessages) => [...prevMessages, { "message": err?.message ?? defaultErrorMessage , "type": "errorMessage" }]);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { message: err?.message ?? defaultErrorMessage, type: "errorMessage" },
+      ]);
     }
     setLoading(false);
-  }
+  };
 
   // Prevent blank submissions and allow for multiline input
   const handleEnter = (e: React.KeyboardEvent) => {
-    
     if (e.key === "Enter") {
       if (isMobile) {
-        e.preventDefault()
+        e.preventDefault();
       } else {
-        if(!e.shiftKey && userInput) {
+        if (!e.shiftKey && userInput) {
           handleSubmit(e);
         }
       }
@@ -142,35 +136,60 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/bitcoin.svg" />
       </Head>
-      <Box position="relative" overflow="hidden" w="full" h="full" >
+      <Box position="relative" overflow="hidden" w="full" h="full">
         <Container
           display="flex"
           flexDir="column"
           alignItems="center"
-          // justifyContent="space-between"
           maxW={"1280px"}
-          // maxH="100%"
           h="100%"
           p={4}
           centerContent
         >
-          <Flex gap={2} alignItems="center" mt={{base: 3, md: 8 }} justifyContent="center">
-            <Heading as="h1" size={{base: "2xl", md: "3xl"}}>
+          <Flex
+            gap={2}
+            alignItems="center"
+            mt={{ base: 3, md: 8 }}
+            justifyContent="center"
+          >
+            <Heading as="h1" size={{ base: "2xl", md: "3xl" }}>
               ChatBTC
             </Heading>
-            <BitcoinIcon fontSize={{base: "4xl", md: "7xl"}} color="orange.400" />
+            <BitcoinIcon
+              fontSize={{ base: "4xl", md: "7xl" }}
+              color="orange.400"
+            />
           </Flex>
-          <Flex id="main" width="full" h="full" maxW="820px" my={5} flexDir="column" gap="4" justifyContent="space-around" overflow="auto" >
-            <Box ref={messageListRef} w="full" bgColor="gray.900" borderRadius="md" flex="1 1 0%" overflow="auto" maxH="100lvh">
-              {messages.length && messages.map((message, index) => {
-                return <MessageBox key={index} message={message} />
-              })}
-              {loading && <MessageLoading />}
+          <Flex
+            id="main"
+            width="full"
+            h="full"
+            maxW="820px"
+            my={5}
+            flexDir="column"
+            gap="4"
+            justifyContent="space-around"
+            overflow="auto"
+          >
+            <Box
+              ref={messageListRef}
+              w="full"
+              bgColor="gray.900"
+              borderRadius="md"
+              flex="1 1 0%"
+              overflow="auto"
+              maxH="100lvh"
+            >
+              {messages.length &&
+                messages.map((message, index) => {
+                  return <MessageBox key={index} message={message} />;
+                })}
+              {loading && <MessageBox message={{type: "apiMessage"}} />}
             </Box>
             {/* <Box w="100%" maxW="100%" flex={{base: "0 0 50px", md:"0 0 100px"}} mb={{base: "70px", md: "70px"}}> */}
             <Box w="100%">
-              <form onSubmit={handleSubmit} >
-                <Flex gap={2} alignItems="flex-end" >
+              <form onSubmit={handleSubmit}>
+                <Flex gap={2} alignItems="flex-end">
                   <Textarea
                     ref={textAreaRef}
                     name=""
@@ -198,51 +217,5 @@ export default function Home() {
         </Container>
       </Box>
     </>
-  )
-}
-
-const messageConfig = {
-  "apiMessage": {
-    color: null,
-    bg: "gray.600",
-    text: "ChatBTC",
-    headingColor: "orange.400"
-  },
-  "userMessage": {
-    color: null,
-    bg: "gray.800",
-    text: "You",
-    headingColor: "purple.400"
-  },
-  "errorMessage": {
-    color: "red.200",
-    bg: "gray.600",
-    text: "ChatBTC",
-    headingColor: "red.500",
-  }
-}
-
-const MessageLoading = () => {
-  return (
-    <Flex flexDir="column" gap={{base: 1, md: 2}} w="100%" bgColor={messageConfig["apiMessage"].bg} py={{base: 3, md: 4}} px={{base: 3, md: 4}}>
-      {/* <Box w="100%" bgColor={type === "userMessage" ? "gray.800" : "gray.600"} py="8" px={{base: 3, md: 4}}> */}
-      <Heading color={messageConfig["apiMessage"].headingColor} fontSize="sm" fontWeight={600}>
-        {messageConfig["apiMessage"].text}
-      </Heading>
-      <BeatLoader color="white" />
-    </Flex>
-  )
-}
-
-const MessageBox = ({message}: {message: Message}) => {
-  const type = message.type
-  return (
-    <Flex flexDir="column" gap={{base: 1, md: 2}} w="100%" bgColor={messageConfig[type].bg ?? ""} textAlign={type === "userMessage" ? "right" : "left"} py={{base: 3, md: 4}} px={{base: 3, md: 4}}>
-      {/* <Box w="100%" bgColor={type === "userMessage" ? "gray.800" : "gray.600"} py="8" px={{base: 3, md: 4}}> */}
-      <Heading color={messageConfig[type].headingColor} fontSize="sm" fontWeight={600}>
-        {messageConfig[type].text}
-      </Heading>
-      <Text whiteSpace="pre-wrap" color={messageConfig[type].color || ""} >{message.message}</Text>
-    </Flex>
-  )
+  );
 }
