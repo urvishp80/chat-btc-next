@@ -23,31 +23,16 @@ interface Message {
   type: "userMessage" | "apiMessage" | "errorMessage"
 }
 
-// const bodyConfig = {
-//   "specification_hash": process.env.SPEC_HASH,
-//   "config": {
-//     "MODEL_SUMMARIZE":{
-//         "provider_id":"openai",
-//         "model_id":"text-davinci-002",
-//         "use_cache":true
-//     },
-//     "WEBCONTENT":{
-//         "provider_id":"browserlessapi",
-//         "use_cache":true,
-//         "error_as_output":false
-//     },
-//     "GOOGLE_CUSTOM_SEARCH":{
-//         "use_cache":true
-//     },
-//     "MODEL_ANSWER_WITH_REFS":{
-//         "provider_id":"openai",
-//         "model_id":"text-davinci-002",
-//         "use_cache":true
-//     }
-//   },
-//   stream: false,
-//   blocking: true,
-// };
+const errorMessagesByBlock = [
+  "Something went wrong. Try again later",
+  "Something went wrong. Try again later",
+  "Something went wrong. Try again later",
+  "We can't answer that question, try rephrasing your question",
+  "Something went wrong. Try again later",
+  "Something went wrong. Try again later",
+]
+
+const defaultErrorMessage = "Something went wrong. Try again later"
 
 export default function Home() {
   const [userInput, setUserInput] = useState("");
@@ -118,14 +103,19 @@ export default function Home() {
     setMessages((prevMessages) => [...prevMessages, { "message": userInput, "type": "userMessage" }]);
     setUserInput("")
 
-    const errMessage = "Something went wrong. Try again later"
     try {
       const data = await fetchResult(query)
-      const answer = data?.result.run?.results[0][0]?.value?.answer
-      if (!answer) throw new Error(errMessage)
+      const results = data?.result.run?.results
+      const answer = (results && results[0][0]?.value?.answer) ?? ""
+      if (!answer) {
+        const block_error_index = data?.result?.run?.status?.blocks?.findIndex((block: {[key: string]: string | number}) => block.status === "errored")
+        const errMessage = (block_error_index && block_error_index !== -1) ? errorMessagesByBlock[block_error_index] : defaultErrorMessage
+        // below, defaultErrorMessage is a safeguard for future changes to number of blocks that errorMessages may not contain 
+        throw new Error(errMessage ?? defaultErrorMessage)
+      }
       setMessages((prevMessages) => [...prevMessages, { "message": answer, "type": "apiMessage" }]);
     } catch (err: any) {
-      setMessages((prevMessages) => [...prevMessages, { "message": err?.message ?? errMessage , "type": "errorMessage" }]);
+      setMessages((prevMessages) => [...prevMessages, { "message": err?.message ?? defaultErrorMessage , "type": "errorMessage" }]);
     }
     setLoading(false);
   }
@@ -225,7 +215,7 @@ const messageConfig = {
     headingColor: "purple.400"
   },
   "errorMessage": {
-    color: "red.400",
+    color: "red.200",
     bg: "gray.600",
     text: "ChatBTC",
     headingColor: "red.500",
