@@ -90,22 +90,45 @@ export default function Home() {
     ]);
     setUserInput("");
 
+    // if (!answer) {
+    //   const block_error_index = data?.result?.run?.status?.blocks?.findIndex(
+    //     (block: { [key: string]: string | number }) =>
+    //       block.status === "errored"
+    //   );
+    //   const errMessage = getErrorByBlockIndex(block_error_index)
+    //   throw new Error(errMessage ?? defaultErrorMessage);
+    // }
     try {
-      const data = await fetchResult(query);
-      const results = data?.result.run?.results;
-      const answer = (results && results[0][0]?.value?.answer) ?? "";
-      if (!answer) {
-        const block_error_index = data?.result?.run?.status?.blocks?.findIndex(
-          (block: { [key: string]: string | number }) =>
-            block.status === "errored"
-        );
-        const errMessage = getErrorByBlockIndex(block_error_index)
-        throw new Error(errMessage ?? defaultErrorMessage);
+      if (!response.ok) {throw new Error(errMessage)}
+      const data = response.body
+      const reader = data?.getReader();
+      let done = false;
+      let finalAnswerWithLinks = ""
+      let prev = ""
+
+      if (!reader) throw new Error(errMessage)
+      const decoder = new TextDecoder();
+      setLoading(false);
+      setStreamLoading(true);
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        const chunk = decoder.decode(value)
+        console.log(chunk)
+
+        setStreamData((data) => {
+          const _updatedData = {...data}
+          _updatedData.message += chunk
+          return _updatedData
+        })
+
+        if (chunk.length > prev.length) {
+          finalAnswerWithLinks = chunk
+        }
+        prev = chunk
       }
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { message: answer, type: "apiMessage" },
-      ]);
+      await updateMessages(finalAnswerWithLinks)
+
     } catch (err: any) {
       setMessages((prevMessages) => [
         ...prevMessages,
