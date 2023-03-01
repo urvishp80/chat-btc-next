@@ -4,7 +4,7 @@ import styles from "./message.module.css"
 
 export interface Message {
   message: string;
-  type: "userMessage" | "apiMessage" | "errorMessage";
+  type: "userMessage" | "apiMessage" | "errorMessage" | "apiStream";
 }
 const messageConfig = {
   apiMessage: {
@@ -25,14 +25,22 @@ const messageConfig = {
     text: "ChatBTC",
     headingColor: "red.500",
   },
+  apiStream: {
+    color: null,
+    bg: "gray.600",
+    text: "ChatBTC",
+    headingColor: "orange.400",
+  },
 };
 
 const MessageBox = ({
   content,
-  isLoading,
+  loading,
+  streamLoading,
 }: {
   content: Message;
-  isLoading?: boolean;
+  loading?: boolean;
+  streamLoading?: boolean;
 }) => {
   const {message, type} = content
 
@@ -58,8 +66,10 @@ const MessageBox = ({
       >
         {messageConfig[type].text}
       </Heading>
-      {isLoading ? (
+      {loading ? (
         <BeatLoader color="white" />
+      ) : streamLoading ? (
+        <StreamMessageContent message={message} type={type} />
       ) : (
         <MessageContent message={message} type={type} />
       )}
@@ -94,6 +104,16 @@ const MessageContent = ({message, type}: Message) => {
           </div>
         ))}
       </Box>
+    </>
+  )
+}
+
+const StreamMessageContent = ({message, type}: Message) => {
+  return (
+    <>
+      <Text whiteSpace="pre-wrap" color={messageConfig[type].color || ""}>
+        {message}
+      </Text>
     </>
   )
 }

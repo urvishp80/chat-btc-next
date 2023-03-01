@@ -1,5 +1,4 @@
 import Head from "next/head";
-import Image from "next/image";
 import { Inter } from "@next/font/google";
 import styles from "@/styles/Home.module.css";
 import { useEffect, useRef, useState } from "react";
@@ -18,10 +17,18 @@ import { defaultErrorMessage, getErrorByBlockIndex } from "@/config/error-config
 
 const inter = Inter({ subsets: ["latin"] });
 
+const initialStream: Message = {
+  type: "apiStream",
+  message: "",
+}
+const matchFinalWithLinks = /(^\[\d+\]:\shttps:\/\/)/gm
+
 export default function Home() {
   const [userInput, setUserInput] = useState("");
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [streamLoading, setStreamLoading] = useState(false)
+  const [streamData, setStreamData] = useState<Message>(initialStream)
   const [messages, setMessages] = useState<Message[]>([
     {
       message: "Hi there! How can I help?",
@@ -57,6 +64,14 @@ export default function Home() {
     setUserInput(e.target.value);
   };
 
+  const updateMessages = async (finalText: string) => {
+    setTimeout(() => {
+      setStreamLoading(false)
+      setStreamData(initialStream)
+      setMessages((prevMessages) => [...prevMessages, {message: finalText, type: "apiMessage"}]);
+    }, 1000);
+  }
+
   const fetchResult = async (query: string) => {
     const response = await fetch("/api/chat", {
       method: "POST",
@@ -71,9 +86,7 @@ export default function Home() {
         ],
       }),
     });
-    const data = await response.json();
-    console.log(data);
-    return data;
+    return response;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -84,27 +97,18 @@ export default function Home() {
     }
 
     setLoading(true);
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      { message: userInput, type: "userMessage" },
-    ]);
+    setMessages((prevMessages) => [...prevMessages, { "message": userInput, "type": "userMessage" }]);
     setUserInput("");
 
-    // if (!answer) {
-    //   const block_error_index = data?.result?.run?.status?.blocks?.findIndex(
-    //     (block: { [key: string]: string | number }) =>
-    //       block.status === "errored"
-    //   );
-    //   const errMessage = getErrorByBlockIndex(block_error_index)
-    //   throw new Error(errMessage ?? defaultErrorMessage);
-    // }
+    const errMessage = "Something went wrong. Try again later"
+    
     try {
+      const response: Response = await fetchResult(query)
       if (!response.ok) {throw new Error(errMessage)}
       const data = response.body
       const reader = data?.getReader();
       let done = false;
       let finalAnswerWithLinks = ""
-      let prev = ""
 
       if (!reader) throw new Error(errMessage)
       const decoder = new TextDecoder();
@@ -114,19 +118,19 @@ export default function Home() {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
         const chunk = decoder.decode(value)
-        console.log(chunk)
 
-        setStreamData((data) => {
-          const _updatedData = {...data}
-          _updatedData.message += chunk
-          return _updatedData
-        })
-
-        if (chunk.length > prev.length) {
+        if (matchFinalWithLinks.test(chunk)) {
           finalAnswerWithLinks = chunk
+          console.log("final", chunk)
+        } else {
+          setStreamData((data) => {
+            const _updatedData = {...data}
+            _updatedData.message += chunk
+            return _updatedData
+          })
         }
-        prev = chunk
       }
+      
       await updateMessages(finalAnswerWithLinks)
 
     } catch (err: any) {
@@ -207,7 +211,7 @@ export default function Home() {
                 messages.map((message, index) => {
                   return <MessageBox key={index} content={message} />;
                 })}
-              {loading && <MessageBox content={{message: " ", type: "apiMessage"}} isLoading />}
+              {(loading || streamLoading) && <MessageBox content={{message: streamData.message, type: "apiStream"}} loading={loading} streamLoading={streamLoading} />}
             </Box>
             {/* <Box w="100%" maxW="100%" flex={{base: "0 0 50px", md:"0 0 100px"}} mb={{base: "70px", md: "70px"}}> */}
             <Box w="100%">
