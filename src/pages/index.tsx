@@ -120,8 +120,7 @@ export default function Home() {
         const chunk = decoder.decode(value)
 
         if (matchFinalWithLinks.test(chunk)) {
-          finalAnswerWithLinks = chunk
-          console.log("final", chunk)
+          finalAnswerWithLinks = chunk;
         } else {
           setStreamData((data) => {
             const _updatedData = {...data}

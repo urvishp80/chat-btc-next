@@ -57,7 +57,6 @@ export async function DustStream(inputs: ({question: string}[])) {
             } else {
               return;
             }
-            console.log("final", text)
             const queue = encoder.encode(text);
             controller.enqueue(queue);
           } catch (e) {
