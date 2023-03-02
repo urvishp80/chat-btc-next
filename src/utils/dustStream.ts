@@ -19,7 +19,7 @@ export async function DustStream(inputs: ({question: string}[])) {
       "config": {
         "MODEL_SUMMARIZE": {
           "provider_id":"openai",
-          "model_id":"text-davinci-002",
+          "model_id":"gpt-3.5-turbo",
           "use_cache":true
         },
         "ES_SEARCH": {
@@ -27,7 +27,7 @@ export async function DustStream(inputs: ({question: string}[])) {
         },
         "MODEL_ANSWER_WITH_REFS": {
           "provider_id":"openai",
-          "model_id":"text-davinci-002",
+          "model_id":"gpt-3.5-turbo",
           "use_cache":true,
           "use_stream": true,
         }
