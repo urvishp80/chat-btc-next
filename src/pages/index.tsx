@@ -14,13 +14,13 @@ import { BitcoinIcon, SendIcon } from "@/chakra/custom-chakra-icons";
 import { isMobile } from "react-device-detect";
 import MessageBox, { Message } from "@/components/message/message";
 import { defaultErrorMessage, getErrorByBlockIndex } from "@/config/error-config";
-
 const inter = Inter({ subsets: ["latin"] });
-
 const initialStream: Message = {
   type: "apiStream",
   message: "",
+  uniqueId:""
 }
+import { uid } from 'uid';
 const matchFinalWithLinks = /(^\[\d+\]:\shttps:\/\/)/gm
 
 export default function Home() {
@@ -29,10 +29,12 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [streamLoading, setStreamLoading] = useState(false)
   const [streamData, setStreamData] = useState<Message>(initialStream)
+  const [ratings, setRatings] = useState({});
   const [messages, setMessages] = useState<Message[]>([
     {
       message: "Hi there! How can I help?",
       type: "apiMessage",
+      uniqueId: "",
     },
   ]);
 
@@ -64,11 +66,11 @@ export default function Home() {
     setUserInput(e.target.value);
   };
 
-  const updateMessages = async (finalText: string) => {
+  const updateMessages = async (finalText: string,uuid:number) => {
     setTimeout(() => {
       setStreamLoading(false)
       setStreamData(initialStream)
-      setMessages((prevMessages) => [...prevMessages, {message: finalText, type: "apiMessage"}]);
+      setMessages((prevMessages) => [...prevMessages, { message: finalText, type: "apiMessage" , uniqueId : uuid}]);
     }, 1000);
   }
 
@@ -95,16 +97,16 @@ export default function Home() {
     if (query === "") {
       return;
     }
-
+    let uuid = uid(16)
     setLoading(true);
-    setMessages((prevMessages) => [...prevMessages, { "message": userInput, "type": "userMessage" }]);
+    setMessages((prevMessages) => [...prevMessages, { "message": userInput, "type": "userMessage", uniqueId:uuid}]);
     setUserInput("");
 
     const errMessage = "Something went wrong. Try again later"
-    
+
     try {
       const response: Response = await fetchResult(query)
-      if (!response.ok) {throw new Error(errMessage)}
+      if (!response.ok) { throw new Error(errMessage) }
       const data = response.body
       const reader = data?.getReader();
       let done = false;
@@ -123,15 +125,19 @@ export default function Home() {
           finalAnswerWithLinks = chunk;
         } else {
           setStreamData((data) => {
-            const _updatedData = {...data}
+            const _updatedData = { ...data }
             _updatedData.message += chunk
             return _updatedData
           })
         }
       }
-      
-      await updateMessages(finalAnswerWithLinks)
-
+      let question = userInput
+      let answer = finalAnswerWithLinks
+      let uniqueIDD = uuid
+      console.log("question:::",question)
+      console.log("answer:::",answer)
+      console.log("uniqueIDD:::",uniqueIDD)
+      await updateMessages(finalAnswerWithLinks,uuid)
     } catch (err: any) {
       setMessages((prevMessages) => [
         ...prevMessages,
@@ -152,6 +158,38 @@ export default function Home() {
         }
       }
     }
+  };
+
+  const Rating = ({ messageId, rateAnswer }) => {
+    const [rating, setRating] = useState(0);
+  
+    const onRatingChange = (value) => {
+      setRating(value);
+      rateAnswer(messageId, value);
+      console.log("UUID",messageId)
+      console.log("Rating",value)
+    };
+  
+    return (
+      <div>
+        <span>Rate this answer:</span>
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            onClick={() => onRatingChange(value)}
+            disabled={rating === '⭐'}
+          >
+            ⭐
+          </button>
+        ))}
+      </div>
+    );
+  };
+  const rateAnswer = (messageId, value) => {
+    setRatings((prevRatings) => ({
+      ...prevRatings,
+      [messageId]: value,
+    }));
   };
 
   return (
@@ -208,9 +246,18 @@ export default function Home() {
             >
               {messages.length &&
                 messages.map((message, index) => {
-                  return <MessageBox key={index} content={message} />;
+                  const isApiMessage = message.type === "apiMessage";
+                  const greetMsg = message.message === "Hi there! How can I help?"
+                  return (
+                    <div key={index}>
+                      <MessageBox content={message} />
+                      {(isApiMessage && !greetMsg ) && (
+                        <Rating messageId={message.uniqueId} rateAnswer={rateAnswer} />
+                      )}
+                    </div>
+                  );
                 })}
-              {(loading || streamLoading) && <MessageBox content={{message: streamData.message, type: "apiStream"}} loading={loading} streamLoading={streamLoading} />}
+              {(loading || streamLoading) && <MessageBox messageId={uid(16)} content={{ message: streamData.message, type: "apiStream" }} loading={loading} streamLoading={streamLoading} />}
             </Box>
             {/* <Box w="100%" maxW="100%" flex={{base: "0 0 50px", md:"0 0 100px"}} mb={{base: "70px", md: "70px"}}> */}
             <Box w="100%">

@@ -4,7 +4,7 @@ import styles from "./message.module.css"
 
 export interface Message {
   message: string;
-  type: "userMessage" | "apiMessage" | "errorMessage" | "apiStream";
+  type: "userMessage" | "apiMessage" | "errorMessage" | "apiStream" | "uniqueId";
 }
 const messageConfig = {
   apiMessage: {
