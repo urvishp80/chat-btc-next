@@ -13,15 +13,23 @@ import {
 import { BitcoinIcon, SendIcon } from "@/chakra/custom-chakra-icons";
 import { isMobile } from "react-device-detect";
 import MessageBox, { Message } from "@/components/message/message";
-import { defaultErrorMessage, getErrorByBlockIndex } from "@/config/error-config";
+import {
+  defaultErrorMessage,
+  getErrorByBlockIndex,
+} from "@/config/error-config";
+import { uid } from "uid";
+import { MongoClient, ObjectId } from "mongodb";
+import { SupaBaseDatabase } from "@/database/database";
+// import { DBConnection } from "@/database/mongoDb";
+// import {DBConnection} from "@/pages/api/mongo";
+
 const inter = Inter({ subsets: ["latin"] });
 const initialStream: Message = {
   type: "apiStream",
   message: "",
-  uniqueId:""
-}
-import { uid } from 'uid';
-const matchFinalWithLinks = /(^\[\d+\]:\shttps:\/\/)/gm
+  uniqueId: "",
+};
+const matchFinalWithLinks = /(^\[\d+\]:\shttps:\/\/)/gm;
 
 export default function Home() {
   const [userInput, setUserInput] = useState("");
@@ -72,7 +80,27 @@ export default function Home() {
       setStreamData(initialStream)
       setMessages((prevMessages) => [...prevMessages, { message: finalText, type: "apiMessage" , uniqueId : uuid}]);
     }, 1000);
-  }
+  };
+
+  const addDocumentToMongoDB = async (payload) => {
+    const response = await fetch("/api/mongo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const { data } = await response.json();
+    return data;
+  };
+
+  const updateDocumentInMongoDB = async (uniqueId, rating) => {
+    const response = await fetch("/api/mongo", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _id: uniqueId, rating: rating }),
+    });
+    const { data } = await response.json();
+    return data;
+  };
 
   const fetchResult = async (query: string) => {
     const response = await fetch("/api/chat", {
@@ -97,47 +125,62 @@ export default function Home() {
     if (query === "") {
       return;
     }
-    let uuid = uid(16)
+    let uuid = uid(16);
     setLoading(true);
-    setMessages((prevMessages) => [...prevMessages, { "message": userInput, "type": "userMessage", uniqueId:uuid}]);
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { message: userInput, type: "userMessage", uniqueId: uuid },
+    ]);
     setUserInput("");
 
-    const errMessage = "Something went wrong. Try again later"
+    const errMessage = "Something went wrong. Try again later";
 
     try {
-      const response: Response = await fetchResult(query)
-      if (!response.ok) { throw new Error(errMessage) }
-      const data = response.body
+      const response: Response = await fetchResult(query);
+      if (!response.ok) {
+        throw new Error(errMessage);
+      }
+      const data = response.body;
       const reader = data?.getReader();
       let done = false;
-      let finalAnswerWithLinks = ""
+      let finalAnswerWithLinks = "";
 
-      if (!reader) throw new Error(errMessage)
+      if (!reader) throw new Error(errMessage);
       const decoder = new TextDecoder();
       setLoading(false);
       setStreamLoading(true);
       while (!done) {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
-        const chunk = decoder.decode(value)
+        const chunk = decoder.decode(value);
 
         if (matchFinalWithLinks.test(chunk)) {
           finalAnswerWithLinks = chunk;
         } else {
           setStreamData((data) => {
-            const _updatedData = { ...data }
-            _updatedData.message += chunk
-            return _updatedData
-          })
+            const _updatedData = { ...data };
+            _updatedData.message += chunk;
+            return _updatedData;
+          });
         }
       }
-      let question = userInput
-      let answer = finalAnswerWithLinks
-      let uniqueIDD = uuid
-      console.log("question:::",question)
-      console.log("answer:::",answer)
-      console.log("uniqueIDD:::",uniqueIDD)
-      await updateMessages(finalAnswerWithLinks,uuid)
+      let question = userInput;
+      let answer = finalAnswerWithLinks;
+      let uniqueIDD = uuid;
+
+      let payload = {
+        uniqueId: uuid,
+        question: question,
+        answer: answer,
+        rating: "",
+      };
+      //mongodb database
+      // await addDocumentToMongoDB(payload);
+
+      //supabase database
+      await SupaBaseDatabase.getInstance().insertData(payload);
+
+      await updateMessages(finalAnswerWithLinks, uuid);
     } catch (err: any) {
       setMessages((prevMessages) => [
         ...prevMessages,
@@ -162,14 +205,18 @@ export default function Home() {
 
   const Rating = ({ messageId, rateAnswer }) => {
     const [rating, setRating] = useState(0);
-  
-    const onRatingChange = (value) => {
+
+    const onRatingChange = async (value) => {
       setRating(value);
       rateAnswer(messageId, value);
-      console.log("UUID",messageId)
-      console.log("Rating",value)
+
+      //mongodb database
+      // await updateDocumentInMongoDB(messageId, value);
+
+      //supabase database
+      await SupaBaseDatabase.getInstance().updateData(value, messageId);
     };
-  
+
     return (
       <div>
         <span>Rate this answer:</span>
@@ -177,7 +224,7 @@ export default function Home() {
           <button
             key={value}
             onClick={() => onRatingChange(value)}
-            disabled={rating === '⭐'}
+            disabled={rating === "⭐"}
           >
             ⭐
           </button>
@@ -247,17 +294,28 @@ export default function Home() {
               {messages.length &&
                 messages.map((message, index) => {
                   const isApiMessage = message.type === "apiMessage";
-                  const greetMsg = message.message === "Hi there! How can I help?"
+                  const greetMsg =
+                    message.message === "Hi there! How can I help?";
                   return (
                     <div key={index}>
                       <MessageBox content={message} />
-                      {(isApiMessage && !greetMsg ) && (
-                        <Rating messageId={message.uniqueId} rateAnswer={rateAnswer} />
+                      {isApiMessage && !greetMsg && (
+                        <Rating
+                          messageId={message.uniqueId}
+                          rateAnswer={rateAnswer}
+                        />
                       )}
                     </div>
                   );
                 })}
-              {(loading || streamLoading) && <MessageBox messageId={uid(16)} content={{ message: streamData.message, type: "apiStream" }} loading={loading} streamLoading={streamLoading} />}
+              {(loading || streamLoading) && (
+                <MessageBox
+                  messageId={uid(16)}
+                  content={{ message: streamData.message, type: "apiStream" }}
+                  loading={loading}
+                  streamLoading={streamLoading}
+                />
+              )}
             </Box>
             {/* <Box w="100%" maxW="100%" flex={{base: "0 0 50px", md:"0 0 100px"}} mb={{base: "70px", md: "70px"}}> */}
             <Box w="100%">
