@@ -18,10 +18,7 @@ import {
   getErrorByBlockIndex,
 } from "@/config/error-config";
 import { uid } from "uid";
-import { MongoClient, ObjectId } from "mongodb";
 import { SupaBaseDatabase } from "@/database/database";
-// import { DBConnection } from "@/database/mongoDb";
-// import {DBConnection} from "@/pages/api/mongo";
 
 const inter = Inter({ subsets: ["latin"] });
 const initialStream: Message = {
