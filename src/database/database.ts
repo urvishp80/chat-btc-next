@@ -30,10 +30,10 @@ export class SupaBaseDatabase {
       console.log("Q&A inserted:", data);
     }
   }
-  async updateData(rate: string, id: string) {
+  async updateData(rate: string, id: string,time) {
     const { data, error } = await supabase
       .from(DB_NAME)
-      .update({ rating: rate })
+      .update({ rating: rate , updatedAt:time })
       .eq("uniqueId", id);
 
     if (error) {

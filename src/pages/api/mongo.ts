@@ -18,7 +18,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     switch (req.method) {
       case "GET":
-        const documents = await collection.find().toArray();
+        let query1 = {uniqueId:req.query.unique}
+        const documents = await collection.find(query1).toArray();
         res.status(200).json({ data: documents });
         break;
 
@@ -29,10 +30,17 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         break;
 
       case "PUT":
-        const { _id, ...updatedData } = req.body;
+        let query = {uniqueId:req.query.unique}
+        let payload = req.body
+        let payload1 = {
+          uniqueId : payload.uniqueId,
+          question:payload.question,
+          answer:payload.answer,
+          rating:payload.rating
+        }
         const updateResult = await collection.updateOne(
-          { _id: new ObjectId(_id) },
-          { $set: updatedData }
+          query,
+          { $set: payload1 }
         );
         res.status(200).json({ data: updateResult.modifiedCount });
         break;

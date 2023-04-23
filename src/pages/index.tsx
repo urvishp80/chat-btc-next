@@ -17,7 +17,7 @@ import {
   defaultErrorMessage,
   getErrorByBlockIndex,
 } from "@/config/error-config";
-import { uid } from "uid";
+import {v4 as uuidv4} from 'uuid';
 import { SupaBaseDatabase } from "@/database/database";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -88,12 +88,20 @@ export default function Home() {
     const { data } = await response.json();
     return data;
   };
+  const getDocumentInMongoDB = async (uniqueId) => {
+    const response = await fetch("/api/mongo?unique="+uniqueId, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+    const { data } = await response.json();
+    return data;
+  };
 
-  const updateDocumentInMongoDB = async (uniqueId, rating) => {
-    const response = await fetch("/api/mongo", {
+  const updateDocumentInMongoDB = async (uniqueId, payload) => {
+    const response = await fetch("/api/mongo?unique="+uniqueId, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ _id: uniqueId, rating: rating }),
+      body: JSON.stringify(payload),
     });
     const { data } = await response.json();
     return data;
@@ -122,7 +130,7 @@ export default function Home() {
     if (query === "") {
       return;
     }
-    let uuid = uid(16);
+    let uuid = uuidv4();
     setLoading(true);
     setMessages((prevMessages) => [
       ...prevMessages,
@@ -161,15 +169,18 @@ export default function Home() {
           });
         }
       }
+
       let question = userInput;
       let answer = finalAnswerWithLinks;
       let uniqueIDD = uuid;
-
+      // let date_ob = new Date();
       let payload = {
-        uniqueId: uuid,
+        uniqueId: uniqueIDD,
         question: question,
         answer: answer,
-        rating: "",
+        rating: null,
+        createdAt:((new Date()).toISOString()).toLocaleString('zh-TW'),
+        updatedAt:null
       };
       //mongodb database
       // await addDocumentToMongoDB(payload);
@@ -208,22 +219,33 @@ export default function Home() {
       rateAnswer(messageId, value);
 
       //mongodb database
-      // await updateDocumentInMongoDB(messageId, value);
+      // let payload = {
+      //   uniqueId: messageId,
+      //   question: "hello",
+      //   answer: "hello",
+      //   rating: value,
+      // };
+      // let data = await getDocumentInMongoDB(messageId);
+      // data = data[0]
+      // data.rating = value
+      // console.log("data:::",data)
+      // await updateDocumentInMongoDB(messageId, data);
 
       //supabase database
-      await SupaBaseDatabase.getInstance().updateData(value, messageId);
+      var currentdate = ((new Date()).toISOString()).toLocaleString('zh-TW');
+      await SupaBaseDatabase.getInstance().updateData(value, messageId,currentdate);
     };
 
     return (
       <div>
         <span>Rate this answer:</span>
-        {[1, 2, 3, 4, 5].map((value) => (
+        {["😢", "😐", "🥳"].map((value,index) => (
           <button
-            key={value}
-            onClick={() => onRatingChange(value)}
+            key={index+1}
+            onClick={() => onRatingChange(index+1)}
             disabled={rating === "⭐"}
           >
-            ⭐
+           {value}
           </button>
         ))}
       </div>
@@ -307,7 +329,7 @@ export default function Home() {
                 })}
               {(loading || streamLoading) && (
                 <MessageBox
-                  messageId={uid(16)}
+                  messageId={uuidv4()}
                   content={{ message: streamData.message, type: "apiStream" }}
                   loading={loading}
                   streamLoading={streamLoading}
