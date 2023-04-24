@@ -17,7 +17,7 @@ import {
   defaultErrorMessage,
   getErrorByBlockIndex,
 } from "@/config/error-config";
-import {v4 as uuidv4} from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 import { SupaBaseDatabase } from "@/database/database";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -71,7 +71,7 @@ export default function Home() {
     setUserInput(e.target.value);
   };
 
-  const updateMessages = async (finalText: string,uuid:number) => {
+  const updateMessages = async (finalText: string, uuid:string) => {
     setTimeout(() => {
       setStreamLoading(false)
       setStreamData(initialStream)
@@ -192,7 +192,7 @@ export default function Home() {
     } catch (err: any) {
       setMessages((prevMessages) => [
         ...prevMessages,
-        { message: err?.message ?? defaultErrorMessage, type: "errorMessage" },
+        { message: err?.message ?? defaultErrorMessage, type: "errorMessage", uniqueId: uuidv4(),},
       ]);
     }
     setLoading(false);
@@ -330,7 +330,7 @@ export default function Home() {
               {(loading || streamLoading) && (
                 <MessageBox
                   messageId={uuidv4()}
-                  content={{ message: streamData.message, type: "apiStream" }}
+                  content={{ message: streamData.message, type: "apiStream", uniqueId:uuidv4()}}
                   loading={loading}
                   streamLoading={streamLoading}
                 />
