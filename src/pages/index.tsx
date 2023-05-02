@@ -27,6 +27,10 @@ const initialStream: Message = {
   uniqueId: "",
 };
 const matchFinalWithLinks = /(^\[\d+\]:\shttps:\/\/)/gm;
+interface RatingProps {
+  messageId: string;
+  rateAnswer: (messageId: string, value: number) => void;
+}
 
 export default function Home() {
   const [userInput, setUserInput] = useState("");
@@ -211,10 +215,10 @@ export default function Home() {
     }
   };
 
-  const Rating = ({ messageId, rateAnswer }) => {
+  const Rating = ({ messageId, rateAnswer }: RatingProps) => {
     const [rating, setRating] = useState(0);
 
-    const onRatingChange = async (value) => {
+    const onRatingChange = async (value: number) => {
       setRating(value);
       rateAnswer(messageId, value);
 
@@ -239,19 +243,19 @@ export default function Home() {
     return (
       <div>
         <span>Rate this answer:</span>
-        {["😢", "😐", "🥳"].map((value,index) => (
+        {["😢", "😐", "🥳"].map((value, index) => (
           <button
-            key={index+1}
-            onClick={() => onRatingChange(index+1)}
-            disabled={rating === "⭐"}
+            key={index + 1}
+            onClick={() => onRatingChange(index + 1)}
+            disabled={rating === index + 1}
           >
-           {value}
+            {value}
           </button>
         ))}
       </div>
     );
   };
-  const rateAnswer = (messageId, value) => {
+  const rateAnswer = (messageId: string, value: number) => {
     setRatings((prevRatings) => ({
       ...prevRatings,
       [messageId]: value,
@@ -329,7 +333,7 @@ export default function Home() {
                 })}
               {(loading || streamLoading) && (
                 <MessageBox
-                  messageId={uuidv4()}
+                  // messageId={uuidv4()}
                   content={{ message: streamData.message, type: "apiStream", uniqueId:uuidv4()}}
                   loading={loading}
                   streamLoading={streamLoading}
