@@ -83,7 +83,7 @@ export default function Home() {
     }, 1000);
   };
 
-  const addDocumentToMongoDB = async (payload) => {
+  const addDocumentToMongoDB = async (payload:any) => {
     const response = await fetch("/api/mongo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -92,7 +92,7 @@ export default function Home() {
     const { data } = await response.json();
     return data;
   };
-  const getDocumentInMongoDB = async (uniqueId) => {
+  const getDocumentInMongoDB = async (uniqueId: string) => {
     const response = await fetch("/api/mongo?unique="+uniqueId, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
@@ -101,7 +101,7 @@ export default function Home() {
     return data;
   };
 
-  const updateDocumentInMongoDB = async (uniqueId, payload) => {
+  const updateDocumentInMongoDB = async (uniqueId: string, payload:any) => {
     const response = await fetch("/api/mongo?unique="+uniqueId, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
