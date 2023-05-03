@@ -183,7 +183,7 @@ export default function Home() {
         question: question,
         answer: answer,
         rating: null,
-        createdAt:((new Date()).toISOString()).toLocaleString('zh-TW'),
+        createdAt:  (new Date()).toISOString(),
         updatedAt:null
       };
       //mongodb database
@@ -236,7 +236,7 @@ export default function Home() {
       // await updateDocumentInMongoDB(messageId, data);
 
       //supabase database
-      var currentdate = ((new Date()).toISOString()).toLocaleString('zh-TW');
+      var currentdate =  (new Date()).toISOString();
       await SupaBaseDatabase.getInstance().updateData(value, messageId, currentdate);
     };
 
