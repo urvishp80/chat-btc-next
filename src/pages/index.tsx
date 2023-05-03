@@ -237,7 +237,7 @@ export default function Home() {
 
       //supabase database
       var currentdate = ((new Date()).toISOString()).toLocaleString('zh-TW');
-      await SupaBaseDatabase.getInstance().updateData(value, messageId,currentdate);
+      await SupaBaseDatabase.getInstance().updateData(value, messageId, currentdate);
     };
 
     return (

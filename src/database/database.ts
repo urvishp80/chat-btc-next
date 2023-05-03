@@ -1,9 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
+import getConfig from 'next/config';
+
+// Access the environment variables
+const { publicRuntimeConfig } = getConfig();
+const SUPABASE_URL = publicRuntimeConfig.SUPABASE_URL;
+const SUPABASE_ANON_KEY = publicRuntimeConfig.SUPABASE_ANON_KEY;
+const DB_NAME = publicRuntimeConfig.DB_NAME;
 
 // Initialize Supabase client
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
-const DB_NAME = process.env.DB_NAME;
 let supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Example usage: Fetch all rows from a table named "tasks"
@@ -30,7 +34,7 @@ export class SupaBaseDatabase {
       console.log("Q&A inserted:", data);
     }
   }
-  async updateData(rate: number, id: string,time) {
+  async updateData(rate: number, id: string, time: string) {
     const { data, error } = await supabase
       .from(DB_NAME)
       .update({ rating: rate , updatedAt:time })
