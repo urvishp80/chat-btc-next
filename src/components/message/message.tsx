@@ -5,8 +5,21 @@ import styles from "./message.module.css"
 export interface Message {
   message: string;
   type: "userMessage" | "apiMessage" | "errorMessage" | "apiStream";
+  uniqueId: string;
 }
-const messageConfig = {
+
+type MessageType = "userMessage" | "apiMessage" | "errorMessage" | "apiStream";
+
+type MessageConfig = {
+  [key in MessageType]: {
+    color: string | null;
+    bg: string;
+    text: string;
+    headingColor: string;
+  };
+};
+
+const messageConfig: MessageConfig = {
   apiMessage: {
     color: null,
     bg: "gray.600",
@@ -47,7 +60,7 @@ const MessageBox = ({
   // const bodyRegex = /^\[\d+\]:/gm
   // const urlRegex = /^\[\d+\]:(.*)/gm
   // const messageLinks = message?.match(urlRegex)
-  
+
   return (
     <Flex
       flexDir="column"
@@ -69,9 +82,9 @@ const MessageBox = ({
       {loading ? (
         <BeatLoader color="white" />
       ) : streamLoading ? (
-        <StreamMessageContent message={message} type={type} />
+        <StreamMessageContent message={message} type={type} uniqueId={""} />
       ) : (
-        <MessageContent message={message} type={type} />
+        <MessageContent message={message} type={type} uniqueId={""} />
       )}
     </Flex>
   );
