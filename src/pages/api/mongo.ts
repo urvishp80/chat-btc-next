@@ -1,15 +1,18 @@
-import { MongoClient, ObjectId } from "mongodb";
+import { MongoClient, MongoClientOptions, ObjectId } from "mongodb";
 import { NextApiRequest, NextApiResponse } from "next";
+import getConfig from 'next/config';
 
-const connectionString = process.env.MONGO_URL;
-const dbName = process.env.MONGO_DB_NAME
-const collectionName = process.env.COLLECTION_NAME;
+const { publicRuntimeConfig } = getConfig();
+const connectionString = publicRuntimeConfig.MONGO_URL;
+const dbName = publicRuntimeConfig.MONGO_DB_NAME
+const collectionName = publicRuntimeConfig.COLLECTION_NAME;
+
+const options: MongoClientOptions = {
+  retryWrites: true,
+};
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  const client = new MongoClient(connectionString, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  });
+  const client = new MongoClient(connectionString, options);
 
   try {
     await client.connect();
@@ -26,7 +29,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       case "POST":
         const newDocument = req.body;
         const result = await collection.insertOne(newDocument);
-        res.status(201).json({ data: result.ops[0] });
+        newDocument._id = result.insertedId;
+        res.status(201).json({ data: newDocument });
         break;
 
       case "PUT":
@@ -49,7 +53,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         res.setHeader("Allow", ["GET", "POST", "PUT"]);
         res.status(405).end(`Method ${req.method} Not Allowed`);
     }
-  } catch (error) {
+  } catch (error:any) {
     res.status(500).json({ error: error.message });
   } finally {
     await client.close();
