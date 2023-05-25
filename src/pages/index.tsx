@@ -32,13 +32,75 @@ interface RatingProps {
   rateAnswer: (messageId: string, value: number) => void;
 }
 
+interface FeedbackStatus {
+  [messageId: string]: "submitted" | undefined;
+}
+
+const Rating = ({ messageId, rateAnswer }: RatingProps) => {
+  const [rating, setRating] = useState(0);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (feedbackSubmitted) {
+      // Clear the feedbackSubmitted state after 3 seconds
+      const setTimeoutId = setTimeout(() => {
+        setFeedbackSubmitted(false);
+      }, 3000);
+      // Cleanup on unmount
+      return () => clearTimeout(setTimeoutId);
+    }
+  }, [feedbackSubmitted]);
+
+  const onRatingChange = async (value: number) => {
+    setRating(value);
+    setFeedbackSubmitted(true);
+
+    // Moved from the rateAnswer function
+    const currentdate = new Date().toISOString();
+    await SupaBaseDatabase.getInstance().updateData(
+      value,
+      messageId,
+      currentdate
+    );
+
+    // Reset feedbackSubmitted state after 3 seconds
+    setTimeout(() => {
+      setFeedbackSubmitted(false);
+    }, 3000);
+  };
+
+  return (
+    <div>
+      {feedbackSubmitted ? (
+        <span>
+          Your feedback is recorded. You can update it after 3 seconds.
+        </span>
+      ) : (
+        <>
+          <span>Rate this answer:</span>
+          {["😢", "😐", "🥳"].map((value, index) => (
+            <button
+              key={index + 1}
+              onClick={() => onRatingChange(index + 1)}
+              disabled={rating === index + 1}
+            >
+              {value}
+            </button>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}; // End of Rating component
+
 export default function Home() {
   const [userInput, setUserInput] = useState("");
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [streamLoading, setStreamLoading] = useState(false)
-  const [streamData, setStreamData] = useState<Message>(initialStream)
+  const [streamLoading, setStreamLoading] = useState(false);
+  const [streamData, setStreamData] = useState<Message>(initialStream);
   const [ratings, setRatings] = useState({});
+  const [feedbackStatus, setFeedbackStatus] = useState<FeedbackStatus>({});
   const [messages, setMessages] = useState<Message[]>([
     {
       message: "Hi there! How can I help?",
@@ -75,15 +137,18 @@ export default function Home() {
     setUserInput(e.target.value);
   };
 
-  const updateMessages = async (finalText: string, uuid:string) => {
+  const updateMessages = async (finalText: string, uuid: string) => {
     setTimeout(() => {
-      setStreamLoading(false)
-      setStreamData(initialStream)
-      setMessages((prevMessages) => [...prevMessages, { message: finalText, type: "apiMessage" , uniqueId : uuid}]);
+      setStreamLoading(false);
+      setStreamData(initialStream);
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { message: finalText, type: "apiMessage", uniqueId: uuid },
+      ]);
     }, 1000);
   };
 
-  const addDocumentToMongoDB = async (payload:any) => {
+  const addDocumentToMongoDB = async (payload: any) => {
     const response = await fetch("/api/mongo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -93,7 +158,7 @@ export default function Home() {
     return data;
   };
   const getDocumentInMongoDB = async (uniqueId: string) => {
-    const response = await fetch("/api/mongo?unique="+uniqueId, {
+    const response = await fetch("/api/mongo?unique=" + uniqueId, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });
@@ -101,8 +166,8 @@ export default function Home() {
     return data;
   };
 
-  const updateDocumentInMongoDB = async (uniqueId: string, payload:any) => {
-    const response = await fetch("/api/mongo?unique="+uniqueId, {
+  const updateDocumentInMongoDB = async (uniqueId: string, payload: any) => {
+    const response = await fetch("/api/mongo?unique=" + uniqueId, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -183,8 +248,8 @@ export default function Home() {
         question: question,
         answer: answer,
         rating: null,
-        createdAt:  (new Date()).toISOString(),
-        updatedAt:null
+        createdAt: new Date().toISOString(),
+        updatedAt: null,
       };
       //mongodb database
       // await addDocumentToMongoDB(payload);
@@ -196,7 +261,11 @@ export default function Home() {
     } catch (err: any) {
       setMessages((prevMessages) => [
         ...prevMessages,
-        { message: err?.message ?? defaultErrorMessage, type: "errorMessage", uniqueId: uuidv4(),},
+        {
+          message: err?.message ?? defaultErrorMessage,
+          type: "errorMessage",
+          uniqueId: uuidv4(),
+        },
       ]);
     }
     setLoading(false);
@@ -215,47 +284,8 @@ export default function Home() {
     }
   };
 
-  const Rating = ({ messageId, rateAnswer }: RatingProps) => {
-    const [rating, setRating] = useState(0);
-
-    const onRatingChange = async (value: number) => {
-      setRating(value);
-      rateAnswer(messageId, value);
-
-      //mongodb database
-      // let payload = {
-      //   uniqueId: messageId,
-      //   question: "hello",
-      //   answer: "hello",
-      //   rating: value,
-      // };
-      // let data = await getDocumentInMongoDB(messageId);
-      // data = data[0]
-      // data.rating = value
-      // console.log("data:::",data)
-      // await updateDocumentInMongoDB(messageId, data);
-
-      //supabase database
-      var currentdate =  (new Date()).toISOString();
-      await SupaBaseDatabase.getInstance().updateData(value, messageId, currentdate);
-    };
-
-    return (
-      <div>
-        <span>Rate this answer:</span>
-        {["😢", "😐", "🥳"].map((value, index) => (
-          <button
-            key={index + 1}
-            onClick={() => onRatingChange(index + 1)}
-            disabled={rating === index + 1}
-          >
-            {value}
-          </button>
-        ))}
-      </div>
-    );
-  };
-  const rateAnswer = (messageId: string, value: number) => {
+  const rateAnswer = async (messageId: string, value: number) => {
+    // UPDATED: Handle the rating updates
     setRatings((prevRatings) => ({
       ...prevRatings,
       [messageId]: value,
@@ -334,7 +364,11 @@ export default function Home() {
               {(loading || streamLoading) && (
                 <MessageBox
                   // messageId={uuidv4()}
-                  content={{ message: streamData.message, type: "apiStream", uniqueId:uuidv4()}}
+                  content={{
+                    message: streamData.message,
+                    type: "apiStream",
+                    uniqueId: uuidv4(),
+                  }}
                   loading={loading}
                   streamLoading={streamLoading}
                 />
