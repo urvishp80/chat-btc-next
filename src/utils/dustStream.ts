@@ -17,7 +17,7 @@ export async function DustStream(inputs: ({question: string}[])) {
     body: JSON.stringify({
       "specification_hash": process.env.SPEC_HASH,
       "config": {
-        "MODEL_SUMMARIZE": {
+        "KEYWORD_EXTRACT": {
           "provider_id":"openai",
           "model_id":"gpt-3.5-turbo",
           "use_cache":true
