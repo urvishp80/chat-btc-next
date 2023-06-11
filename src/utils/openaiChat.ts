@@ -16,19 +16,26 @@ interface Content {
   link: string;
 }
 
+// interface Result {
+//   title: {
+//     raw: string;
+//   };
+//   body: {
+//     raw: string;
+//   };
+//   url: {
+//     raw: string;
+//   };
+//   body_type: {
+//     raw: string;
+//   };
+// }
 interface Result {
-  title: {
-    raw: string;
-  };
-  body: {
-    raw: string;
-  };
-  url: {
-    raw: string;
-  };
-  body_type: {
-    raw: string;
-  };
+  title: { raw: string };
+  body: { raw: string };
+  url: { raw: string };
+  body_type: { raw: string };
+  type?: { raw: string }; // Add this line to include the 'type' property
 }
 
 interface SummaryData {
@@ -175,7 +182,7 @@ async function SummaryGenerate(question: string, ans: string): Promise<string> {
           { role: "system", content: "You are an AI assistant providing helpful answers." },
           {
             role: "user",
-            content: `You are given the following extracted parts of a long document and a question. Provide a conversational answer based on the context provided.You should only provide hyperlinks that reference the context below. Do NOT make up hyperlinks. If you can't find the answer in the context below, just say 'I can not find the proper answer to your question. Although I'm not entirely certain, I have provided some helpful links below for you to explore:' Don't try to make up an answer. If the question is not related to the context, politely respond that 'There is no answer to the question you asked but below are the links that might help you'.Question: ${question} ========= ${ans}=========`,
+            content: `You are given the following extracted parts of a long document and a question. Provide a conversational detailed answer based on the context provided. DO NOT include any external references or links in the answers. If you are absolutely certain that the answer cannot be found in the context below, just say 'I cannot find the proper answer to your question. Although I'm not entirely certain, further research on the topic may provide you with more accurate information.' Don't try to make up an answer. If the question is not related to the context, politely respond that 'There is no answer to the question you asked based on the given context, but further research on the topic may help you find the information you're seeking.'Question: ${question} ========= ${ans}=========`,
           },
         ],
         temperature: 0.7,
@@ -226,27 +233,27 @@ export async function processInput(input: { question: string }[]): Promise<strin
   try {
     const question = input[0].question;
 
-    const keywords = await extractKeywords(question);
+    const extractedKeywords  = await extractKeywords(question);
+
+    const keywords = extractedKeywords === "" ? question : extractedKeywords;
 
     const searchResults = await extractFromElasticsearch(keywords);
 
-    const extractedContent = searchResults.slice(0, 3).map((result: Result) => {
-      if (result.body_type.raw === "markdown") {
-        return {
-          title: result.title.raw,
-          snippet: concatenateTextFields(result.body.raw),
-          link: result.url.raw,
-        };
-      } else {
-        return {
-          title: result.title.raw,
-          snippet: result.body.raw,
-          link: result.url.raw,
-        };
-      }
-    });
+    const extractedContent = searchResults.map((result: Result) => {
+      const isQuestionOnStackExchange = result.type?.raw === "question" && result.url?.raw.includes("stackexchange");
+      const isMarkdown = result.body_type.raw === "markdown";
+      const snippet = isMarkdown ? concatenateTextFields(result.body.raw) : result.body.raw;
 
-    const cleanedContent = extractedContent.map((content: Content) => ({
+      return isQuestionOnStackExchange
+        ? null
+        : {
+            title: result.title.raw,
+            snippet: snippet,
+            link: result.url.raw,
+          };
+    }).filter((item: Result | null) => item !== null);
+
+    const cleanedContent = extractedContent.slice(0, 6).map((content: Content) => ({
       title: cleanText(content.title),
       snippet: cleanText(content.snippet),
       link: content.link,
@@ -276,7 +283,6 @@ export async function processInput(input: { question: string }[]): Promise<strin
 
     return finalAnswer.data;
   } catch (error) {
-    console.error(error);
     return "The system is overloaded with requests, can you please ask your question in 5 seconds again? Thank you!";
 }
 }
