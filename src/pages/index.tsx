@@ -101,6 +101,7 @@ export default function Home() {
   const [streamData, setStreamData] = useState<Message>(initialStream);
   const [ratings, setRatings] = useState({});
   const [feedbackStatus, setFeedbackStatus] = useState<FeedbackStatus>({});
+  const [typedMessage, setTypedMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
       message: "Hi there! How can I help?",
@@ -111,6 +112,20 @@ export default function Home() {
 
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  // add typing effect
+  const addTypingEffect = async (message: string, callback: (typedText: string) => void) => {
+    setTypedMessage("");
+
+    let typedText = "";
+    for (const char of message) {
+      typedText += char;
+      setTypedMessage(typedText);
+      await new Promise((resolve) => setTimeout(resolve, 15)); // Adjust 15ms to change typing speed
+    }
+    // Call the callback function to update the message in the state
+    callback(typedText);
+  };
 
   // Auto scroll chat to bottom
   useEffect(() => {
@@ -138,14 +153,20 @@ export default function Home() {
   };
 
   const updateMessages = async (finalText: string, uuid: string) => {
-    setTimeout(() => {
+    // Call the addTypingEffect function to add a typing effect to the finalText
+    await addTypingEffect(finalText, (messageWithTypingEffect: string) => {
       setStreamLoading(false);
       setStreamData(initialStream);
+
       setMessages((prevMessages) => [
         ...prevMessages,
-        { message: finalText, type: "apiMessage", uniqueId: uuid },
+        {
+          message: messageWithTypingEffect,
+          type: "apiMessage",
+          uniqueId: uuid,
+        },
       ]);
-    }, 1000);
+    });
   };
 
   const addDocumentToMongoDB = async (payload: any) => {
@@ -199,6 +220,8 @@ export default function Home() {
     if (query === "") {
       return;
     }
+    // Reset the typedMessage state
+    setTypedMessage("");
     let uuid = uuidv4();
     setLoading(true);
     setMessages((prevMessages) => [
@@ -365,7 +388,7 @@ export default function Home() {
                 <MessageBox
                   // messageId={uuidv4()}
                   content={{
-                    message: streamData.message,
+                    message: streamLoading ? typedMessage : streamData.message,
                     type: "apiStream",
                     uniqueId: uuidv4(),
                   }}
