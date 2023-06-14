@@ -19,6 +19,8 @@ import {
 } from "@/config/error-config";
 import { v4 as uuidv4 } from "uuid";
 import { SupaBaseDatabase } from "@/database/database";
+import BackgroundHelper from "@/components/background/BackgroundHelper";
+import Rating from "@/components/rating/Rating";
 
 const inter = Inter({ subsets: ["latin"] });
 const initialStream: Message = {
@@ -36,62 +38,6 @@ interface FeedbackStatus {
   [messageId: string]: "submitted" | undefined;
 }
 
-const Rating = ({ messageId, rateAnswer }: RatingProps) => {
-  const [rating, setRating] = useState(0);
-  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
-
-  useEffect(() => {
-    if (feedbackSubmitted) {
-      // Clear the feedbackSubmitted state after 3 seconds
-      const setTimeoutId = setTimeout(() => {
-        setFeedbackSubmitted(false);
-      }, 3000);
-      // Cleanup on unmount
-      return () => clearTimeout(setTimeoutId);
-    }
-  }, [feedbackSubmitted]);
-
-  const onRatingChange = async (value: number) => {
-    setRating(value);
-    setFeedbackSubmitted(true);
-
-    // Moved from the rateAnswer function
-    const currentdate = new Date().toISOString();
-    await SupaBaseDatabase.getInstance().updateData(
-      value,
-      messageId,
-      currentdate
-    );
-
-    // Reset feedbackSubmitted state after 3 seconds
-    setTimeout(() => {
-      setFeedbackSubmitted(false);
-    }, 3000);
-  };
-
-  return (
-    <div>
-      {feedbackSubmitted ? (
-        <span>
-          Your feedback is recorded. You can update it after 3 seconds.
-        </span>
-      ) : (
-        <>
-          <span>Rate this answer:</span>
-          {["😢", "😐", "🥳"].map((value, index) => (
-            <button
-              key={index + 1}
-              onClick={() => onRatingChange(index + 1)}
-              disabled={rating === index + 1}
-            >
-              {value}
-            </button>
-          ))}
-        </>
-      )}
-    </div>
-  );
-}; // End of Rating component
 
 export default function Home() {
   const [userInput, setUserInput] = useState("");
@@ -112,6 +58,8 @@ export default function Home() {
 
   const messageListRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  const idleBackground = !userInput.trim() && messages.length === 1 && loading === false
 
   // add typing effect
   const addTypingEffect = async (message: string, callback: (typedText: string) => void) => {
@@ -367,35 +315,40 @@ export default function Home() {
               overflow="auto"
               maxH="100lvh"
             >
-              {messages.length &&
-                messages.map((message, index) => {
-                  const isApiMessage = message.type === "apiMessage";
-                  const greetMsg =
-                    message.message === "Hi there! How can I help?";
-                  return (
-                    <div key={index}>
-                      <MessageBox content={message} />
-                      {isApiMessage && !greetMsg && (
-                        <Rating
-                          messageId={message.uniqueId}
-                          rateAnswer={rateAnswer}
-                        />
-                      )}
-                    </div>
-                  );
-                })}
-              {(loading || streamLoading) && (
-                <MessageBox
-                  // messageId={uuidv4()}
-                  content={{
-                    message: streamLoading ? typedMessage : streamData.message,
-                    type: "apiStream",
-                    uniqueId: uuidv4(),
-                  }}
-                  loading={loading}
-                  streamLoading={streamLoading}
-                />
-              )}
+              {
+                idleBackground ? <BackgroundHelper /> :
+                <>
+                  {messages.length &&
+                    messages.map((message, index) => {
+                      const isApiMessage = message.type === "apiMessage";
+                      const greetMsg =
+                        message.message === "Hi there! How can I help?";
+                      return (
+                        <div key={index}>
+                          <MessageBox content={message} />
+                          {isApiMessage && !greetMsg && (
+                            <Rating
+                              messageId={message.uniqueId}
+                              rateAnswer={rateAnswer}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  {(loading || streamLoading) && (
+                    <MessageBox
+                      // messageId={uuidv4()}
+                      content={{
+                        message: streamLoading ? typedMessage : streamData.message,
+                        type: "apiStream",
+                        uniqueId: uuidv4(),
+                      }}
+                      loading={loading}
+                      streamLoading={streamLoading}
+                    />
+                  )}
+                </> 
+              }
             </Box>
             {/* <Box w="100%" maxW="100%" flex={{base: "0 0 50px", md:"0 0 100px"}} mb={{base: "70px", md: "70px"}}> */}
             <Box w="100%">
@@ -403,6 +356,7 @@ export default function Home() {
                 <Flex gap={2} alignItems="flex-end">
                   <Textarea
                     ref={textAreaRef}
+                    placeholder="Type your question here"
                     name=""
                     id="userInput"
                     rows={1}
