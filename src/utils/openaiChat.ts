@@ -5,6 +5,8 @@ import {
   ReconnectInterval,
 } from "eventsource-parser";
 
+const keyword_extractor = require("keyword-extractor");
+
 interface ElementType {
   type: "paragraph" | "heading";
   text: string;
@@ -43,55 +45,76 @@ interface SummaryData {
   cleaned_text: string;
 }
 
-async function extractKeywords(input: string): Promise<string> {
-  async function extractKeywordsCall(
-    input: string,
-    retry: number = 0
-  ): Promise<string> {
-    try {
-      const payload = {
-        model: "gpt-3.5-turbo",
-        messages: [
-          { role: "system", content: "You are helpfull AI assistant" },
-          { role: "user", content: `Extract keywords from input: ${input}` },
-        ],
-        temperature: 0.7,
-        top_p: 1.0,
-        frequency_penalty: 0.0,
-        presence_penalty: 1,
-        max_tokens: 1000,
-        stream: false,
-      };
-      const response = await fetch("https://api.openai.com/v1/chat/completions",{
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
-          },
-          method: "POST",
-          body: JSON.stringify(payload),
-        }
-      );
-      const jsonResponse = await response.json();
+// async function extractKeywords(input: string): Promise<string> {
+//   async function extractKeywordsCall(
+//     input: string,
+//     retry: number = 0
+//   ): Promise<string> {
+//     try {
+//       const payload = {
+//         model: "gpt-3.5-turbo",
+//         messages: [
+//           { role: "system", content: "You are helpfull AI assistant" },
+//           { role: "user", content: `Extract keywords from input: ${input}` },
+//         ],
+//         temperature: 0.7,
+//         top_p: 1.0,
+//         frequency_penalty: 0.0,
+//         presence_penalty: 1,
+//         max_tokens: 1000,
+//         stream: false,
+//       };
+//       const response = await fetch("https://api.openai.com/v1/chat/completions",{
+//           headers: {
+//             "Content-Type": "application/json",
+//             Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
+//           },
+//           method: "POST",
+//           body: JSON.stringify(payload),
+//         }
+//       );
+//       const jsonResponse = await response.json();
 
-      return (
-        jsonResponse?.choices?.[0]?.message?.content
-          ?.split(",")
-          .map((w: string) => w.trim())
-          .join(" ") ||
-        jsonResponse?.choices?.[0]?.message?.content.trim() ||
-        ""
-      );
-    } catch (error) {
-      if (retry < 2) {
-        return extractKeywordsCall(input, retry + 1);
-      } else {
-        return input;
-      }
-    }
+//       return (
+//         jsonResponse?.choices?.[0]?.message?.content
+//           ?.split(",")
+//           .map((w: string) => w.trim())
+//           .join(" ") ||
+//         jsonResponse?.choices?.[0]?.message?.content.trim() ||
+//         ""
+//       );
+//     } catch (error) {
+//       if (retry < 2) {
+//         return extractKeywordsCall(input, retry + 1);
+//       } else {
+//         return input;
+//       }
+//     }
+//   }
+
+//   return extractKeywordsCall(input);
+// }
+
+const extractKeywords = async (inputSentence: string): Promise<string> => {
+  try {
+    const extraction_result: string[] =
+      keyword_extractor.extract(inputSentence, {
+        language: "english",
+        remove_digits: false,
+        return_changed_case: false,
+        remove_duplicates: true,
+        return_chained_words: true,
+      });
+
+    // Convert the output array to a space-separated string
+    const spaceSeparatedString: string = extraction_result.join(" ");
+    return spaceSeparatedString;
+  } catch (error) {
+    return inputSentence
   }
+};
 
-  return extractKeywordsCall(input);
-}
+
 
 async function extractFromElasticsearch(
   keywords: string
@@ -236,6 +259,7 @@ export async function processInput(input: { question: string }[]): Promise<strin
     const extractedKeywords  = await extractKeywords(question);
 
     const keywords = extractedKeywords === "" ? question : extractedKeywords;
+
 
     const searchResults = await extractFromElasticsearch(keywords);
 
