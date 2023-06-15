@@ -209,10 +209,10 @@ export default function Home() {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
         const chunk = decoder.decode(value);
-
         if (matchFinalWithLinks.test(chunk)) {
           finalAnswerWithLinks = chunk;
         } else {
+          finalAnswerWithLinks += chunk; // Store the plain text in finalAnswerWithLinks
           setStreamData((data) => {
             const _updatedData = { ...data };
             _updatedData.message += chunk;
@@ -224,7 +224,7 @@ export default function Home() {
       let question = userInput;
       let answer = finalAnswerWithLinks;
       let uniqueIDD = uuid;
-      let dateString = "14-06-2023"; // DD-MM-YY
+      let dateString = "15-06-2023"; // DD-MM-YY
       let timeString = "00:00:00";
 
       const dateTimeString = dateString.split("-").reverse().join("-") + "T" + timeString;

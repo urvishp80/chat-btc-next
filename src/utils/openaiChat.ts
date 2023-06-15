@@ -5,7 +5,8 @@ import {
   ReconnectInterval,
 } from "eventsource-parser";
 
-const keyword_extractor = require("keyword-extractor");
+import keyword_extractor from "keyword-extractor";
+
 
 interface ElementType {
   type: "paragraph" | "heading";
@@ -18,20 +19,6 @@ interface Content {
   link: string;
 }
 
-// interface Result {
-//   title: {
-//     raw: string;
-//   };
-//   body: {
-//     raw: string;
-//   };
-//   url: {
-//     raw: string;
-//   };
-//   body_type: {
-//     raw: string;
-//   };
-// }
 interface Result {
   title: { raw: string };
   body: { raw: string };
@@ -45,56 +32,6 @@ interface SummaryData {
   cleaned_text: string;
 }
 
-// async function extractKeywords(input: string): Promise<string> {
-//   async function extractKeywordsCall(
-//     input: string,
-//     retry: number = 0
-//   ): Promise<string> {
-//     try {
-//       const payload = {
-//         model: "gpt-3.5-turbo",
-//         messages: [
-//           { role: "system", content: "You are helpfull AI assistant" },
-//           { role: "user", content: `Extract keywords from input: ${input}` },
-//         ],
-//         temperature: 0.7,
-//         top_p: 1.0,
-//         frequency_penalty: 0.0,
-//         presence_penalty: 1,
-//         max_tokens: 1000,
-//         stream: false,
-//       };
-//       const response = await fetch("https://api.openai.com/v1/chat/completions",{
-//           headers: {
-//             "Content-Type": "application/json",
-//             Authorization: `Bearer ${process.env.OPENAI_API_KEY ?? ""}`,
-//           },
-//           method: "POST",
-//           body: JSON.stringify(payload),
-//         }
-//       );
-//       const jsonResponse = await response.json();
-
-//       return (
-//         jsonResponse?.choices?.[0]?.message?.content
-//           ?.split(",")
-//           .map((w: string) => w.trim())
-//           .join(" ") ||
-//         jsonResponse?.choices?.[0]?.message?.content.trim() ||
-//         ""
-//       );
-//     } catch (error) {
-//       if (retry < 2) {
-//         return extractKeywordsCall(input, retry + 1);
-//       } else {
-//         return input;
-//       }
-//     }
-//   }
-
-//   return extractKeywordsCall(input);
-// }
-
 const extractKeywords = async (inputSentence: string): Promise<string> => {
   try {
     const extraction_result: string[] =
@@ -105,8 +42,6 @@ const extractKeywords = async (inputSentence: string): Promise<string> => {
         remove_duplicates: true,
         return_chained_words: true,
       });
-
-    // Convert the output array to a space-separated string
     const spaceSeparatedString: string = extraction_result.join(" ");
     return spaceSeparatedString;
   } catch (error) {
@@ -145,6 +80,23 @@ async function extractFromElasticsearch(
     return undefined;
   }
 }
+
+
+async function extractESresults(Keywords: string, question: string): Promise<any | string> {
+  let searchResults = await extractFromElasticsearch(Keywords);
+
+  if (!searchResults || searchResults.length === 0) {
+    searchResults = await extractFromElasticsearch(question);
+  }
+
+  if (!searchResults || searchResults.length === 0) {
+    return undefined
+  }
+
+  // If searchResults are found, return them
+  return searchResults;
+}
+
 
 function concatenateTextFields(data: any): string {
   let concatenatedText = "";
@@ -259,15 +211,19 @@ export async function processInput(input: { question: string }[]): Promise<strin
     const extractedKeywords  = await extractKeywords(question);
 
     const keywords = extractedKeywords === "" ? question : extractedKeywords;
+    
+    const searchResults = await extractESresults(keywords, question)
 
-
-    const searchResults = await extractFromElasticsearch(keywords);
+    if (!searchResults){
+      let output_string:string = `I am not able to find an answer to this question. So please rephrase your question and ask again.`
+      return output_string;
+    }else{
 
     const extractedContent = searchResults.map((result: Result) => {
       const isQuestionOnStackExchange = result.type?.raw === "question" && result.url?.raw.includes("stackexchange");
       const isMarkdown = result.body_type.raw === "markdown";
       const snippet = isMarkdown ? concatenateTextFields(result.body.raw) : result.body.raw;
-
+    
       return isQuestionOnStackExchange
         ? null
         : {
@@ -276,12 +232,13 @@ export async function processInput(input: { question: string }[]): Promise<strin
             link: result.url.raw,
           };
     }).filter((item: Result | null) => item !== null);
-
+    
     const cleanedContent = extractedContent.slice(0, 6).map((content: Content) => ({
       title: cleanText(content.title),
       snippet: cleanText(content.snippet),
       link: content.link,
     }));
+
 
     const cleanedTextWithLink = cleanedContent.map((content: Content) => ({
       cleaned_text: content.snippet,
@@ -306,6 +263,7 @@ export async function processInput(input: { question: string }[]): Promise<strin
     );
 
     return finalAnswer.data;
+    }
   } catch (error) {
     return "The system is overloaded with requests, can you please ask your question in 5 seconds again? Thank you!";
 }
