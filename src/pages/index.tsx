@@ -38,6 +38,17 @@ interface FeedbackStatus {
   [messageId: string]: "submitted" | undefined;
 }
 
+function formatDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based, so we need to add 1
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  const milliseconds = String(date.getMilliseconds()).padStart(3, '0');
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+}
 
 export default function Home() {
   const [userInput, setUserInput] = useState("");
@@ -213,6 +224,13 @@ export default function Home() {
       let question = userInput;
       let answer = finalAnswerWithLinks;
       let uniqueIDD = uuid;
+      let dateString = "14-06-2023"; // DD-MM-YY
+      let timeString = "00:00:00";
+
+      const dateTimeString = dateString.split("-").reverse().join("-") + "T" + timeString;
+      const dateObject = new Date(dateTimeString);
+      const formattedDateTime = formatDate(dateObject);
+
       // let date_ob = new Date();
       let payload = {
         uniqueId: uniqueIDD,
@@ -221,6 +239,7 @@ export default function Home() {
         rating: null,
         createdAt: new Date().toISOString(),
         updatedAt: null,
+        releasedAt: formattedDateTime
       };
       //mongodb database
       // await addDocumentToMongoDB(payload);
