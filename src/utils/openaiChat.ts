@@ -204,67 +204,66 @@ async function getFinalAnswer(
   return { question: question, data };
 }
 
-export async function processInput(input: { question: string }[]): Promise<string> {
+export async function processInput(input: { question: string } []): Promise < string > {
   try {
     const question = input[0].question;
 
-    const extractedKeywords  = await extractKeywords(question);
+    const extractedKeywords = await extractKeywords(question);
 
     const keywords = extractedKeywords === "" ? question : extractedKeywords;
-    
+
     const searchResults = await extractESresults(keywords, question)
 
-    if (!searchResults){
-      let output_string:string = `I am not able to find an answer to this question. So please rephrase your question and ask again.`
+    if (!searchResults) {
+      let output_string: string = `I am not able to find an answer to this question. So please rephrase your question and ask again.`
       return output_string;
-    }else{
+    } else {
 
-    const extractedContent = searchResults.map((result: Result) => {
-      const isQuestionOnStackExchange = result.type?.raw === "question" && result.url?.raw.includes("stackexchange");
-      const isMarkdown = result.body_type.raw === "markdown";
-      const snippet = isMarkdown ? concatenateTextFields(result.body.raw) : result.body.raw;
-    
-      return isQuestionOnStackExchange
-        ? null
-        : {
+      const extractedContent = searchResults.map((result: Result) => {
+        const isQuestionOnStackExchange = result.type?.raw === "question" && result.url?.raw.includes("stackexchange");
+        const isMarkdown = result.body_type.raw === "markdown";
+        const snippet = isMarkdown ? concatenateTextFields(result.body.raw) : result.body.raw;
+
+        return isQuestionOnStackExchange ?
+          null : {
             title: result.title.raw,
             snippet: snippet,
             link: result.url.raw,
           };
-    }).filter((item: Result | null) => item !== null);
-    
-    const cleanedContent = extractedContent.slice(0, 6).map((content: Content) => ({
-      title: cleanText(content.title),
-      snippet: cleanText(content.snippet),
-      link: content.link,
-    }));
+      }).filter((item: Result | null) => item !== null);
 
-
-    const cleanedTextWithLink = cleanedContent.map((content: Content) => ({
-      cleaned_text: content.snippet,
-      link: content.link,
-    }));
-
-    const slicedTextWithLink = cleanedTextWithLink.map(
-      (content: SummaryData) => ({
-        cleaned_text: content.cleaned_text.slice(0, 2000),
+      const cleanedContent = extractedContent.slice(0, 6).map((content: Content) => ({
+        title: cleanText(content.title),
+        snippet: cleanText(content.snippet),
         link: content.link,
-      })
-    );
+      }));
 
-    const prompt = _example(question, slicedTextWithLink);
 
-    const summary = await SummaryGenerate(question, prompt);
+      const cleanedTextWithLink = cleanedContent.map((content: Content) => ({
+        cleaned_text: content.snippet,
+        link: content.link,
+      }));
 
-    const finalAnswer = await getFinalAnswer(
-      question,
-      summary,
-      slicedTextWithLink
-    );
+      const slicedTextWithLink = cleanedTextWithLink.map(
+        (content: SummaryData) => ({
+          cleaned_text: content.cleaned_text.slice(0, 2000),
+          link: content.link,
+        })
+      );
 
-    return finalAnswer.data;
+      const prompt = _example(question, slicedTextWithLink);
+
+      const summary = await SummaryGenerate(question, prompt);
+
+      const finalAnswer = await getFinalAnswer(
+        question,
+        summary,
+        slicedTextWithLink
+      );
+
+      return finalAnswer.data;
     }
   } catch (error) {
     return "The system is overloaded with requests, can you please ask your question in 5 seconds again? Thank you!";
-}
+  }
 }
