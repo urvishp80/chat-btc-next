@@ -1,6 +1,5 @@
 import Head from "next/head";
 import { Inter } from "@next/font/google";
-import styles from "@/styles/Home.module.css";
 import { useEffect, useRef, useState } from "react";
 import {
   Box,
@@ -173,9 +172,11 @@ export default function Home() {
     return response;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const query = userInput.trim();
+  const handleSubmit = async (e: React.FormEvent, prompt?: string) => {
+    if (e) {
+      e.preventDefault()
+    }
+    const query = prompt ? prompt.trim() : userInput.trim();
     if (query === "") {
       return;
     }
@@ -185,7 +186,7 @@ export default function Home() {
     setLoading(true);
     setMessages((prevMessages) => [
       ...prevMessages,
-      { message: userInput, type: "userMessage", uniqueId: uuid },
+      { message: query, type: "userMessage", uniqueId: uuid },
     ]);
     setUserInput("");
 
@@ -259,6 +260,10 @@ export default function Home() {
       ]);
     }
     setLoading(false);
+  };
+
+  const promptChat = async (e: any, prompt: string) => {
+    handleSubmit(e, prompt)
   };
 
   // Prevent blank submissions and allow for multiline input
@@ -335,7 +340,7 @@ export default function Home() {
               maxH="100lvh"
             >
               {
-                idleBackground ? <BackgroundHelper /> :
+                idleBackground ? <BackgroundHelper promptChat={promptChat} /> :
                 <>
                   {messages.length &&
                     messages.map((message, index) => {
