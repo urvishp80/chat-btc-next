@@ -1,13 +1,3 @@
-import { EventEmitter } from "events";
-import {
-  createParser,
-  ParsedEvent,
-  ReconnectInterval,
-} from "eventsource-parser";
-
-import keyword_extractor from "keyword-extractor";
-
-
 interface ElementType {
   type: "paragraph" | "heading";
   text: string;
@@ -19,84 +9,26 @@ interface Content {
   link: string;
 }
 
+interface CustomContent {
+  title: string;
+  snippet: string;
+  link: string;
+}
+
 interface Result {
-  title: { raw: string };
-  body: { raw: string };
-  url: { raw: string };
-  body_type: { raw: string };
-  type?: { raw: string }; // Add this line to include the 'type' property
+  _source: {
+    title: string;
+    body: string;
+    url: string;
+    body_type: string;
+    type?: string; // Added the 'type' property as optional
+  };
 }
 
 interface SummaryData {
   link: string;
   cleaned_text: string;
 }
-
-const extractKeywords = async (inputSentence: string): Promise<string> => {
-  try {
-    const extraction_result: string[] =
-      keyword_extractor.extract(inputSentence, {
-        language: "english",
-        remove_digits: false,
-        return_changed_case: false,
-        remove_duplicates: true,
-        return_chained_words: true,
-      });
-    const spaceSeparatedString: string = extraction_result.join(" ");
-    return spaceSeparatedString;
-  } catch (error) {
-    return inputSentence
-  }
-};
-
-
-
-async function extractFromElasticsearch(
-  keywords: string
-): Promise<any | undefined> {
-  try {
-    const url = process.env.ES_URL;
-
-    const headers = {
-      Authorization: String(process.env.ES_AUTHORIZATION_TOKEN),
-      "Content-Type": "application/json",
-    };
-
-    const query = keywords;
-
-    const response = await fetch(`${url}/search?query=${query}`, {
-      method: "POST",
-      headers: headers,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error: ${response.status}`);
-    }
-
-    const { results } = await response.json();
-
-    return results;
-  } catch (error) {
-    return undefined;
-  }
-}
-
-
-async function extractESresults(Keywords: string, question: string): Promise<any | string> {
-  let searchResults = await extractFromElasticsearch(Keywords);
-
-  if (!searchResults || searchResults.length === 0) {
-    searchResults = await extractFromElasticsearch(question);
-  }
-
-  if (!searchResults || searchResults.length === 0) {
-    return undefined
-  }
-
-  // If searchResults are found, return them
-  return searchResults;
-}
-
 
 function concatenateTextFields(data: any): string {
   let concatenatedText = "";
@@ -154,7 +86,10 @@ async function SummaryGenerate(question: string, ans: string): Promise<string> {
       const payload = {
         model: "gpt-3.5-turbo",
         messages: [
-          { role: "system", content: "You are an AI assistant providing helpful answers." },
+          {
+            role: "system",
+            content: "You are an AI assistant providing helpful answers.",
+          },
           {
             role: "user",
             content: `You are given the following extracted parts of a long document and a question. Provide a conversational detailed answer based on the context provided. DO NOT include any external references or links in the answers. If you are absolutely certain that the answer cannot be found in the context below, just say 'I cannot find the proper answer to your question. Although I'm not entirely certain, further research on the topic may provide you with more accurate information.' Don't try to make up an answer. If the question is not related to the context, politely respond that 'There is no answer to the question you asked based on the given context, but further research on the topic may help you find the information you're seeking.'Question: ${question} ========= ${ans}=========`,
@@ -177,7 +112,7 @@ async function SummaryGenerate(question: string, ans: string): Promise<string> {
         }
       );
       const jsonResponse = await response.json();
-      return jsonResponse?.choices?.[0]?.message?.content||"";
+      return jsonResponse?.choices?.[0]?.message?.content || "";
     } catch (error) {
       if (retry < 2) {
         return SummaryGenerateCall(question, ans, retry + 1);
@@ -188,6 +123,17 @@ async function SummaryGenerate(question: string, ans: string): Promise<string> {
   }
 
   return SummaryGenerateCall(question, ans);
+}
+
+function removeDuplicatesByID(arr: (CustomContent | null)[]): (CustomContent | null)[] {
+  const seen = new Set();
+  const filteredArr = arr.filter((item) => {
+    if (item === null) return false;
+    const isDuplicate = seen.has(item.link);
+    seen.add(item.link);
+    return !isDuplicate;
+  });
+  return filteredArr;
 }
 
 async function getFinalAnswer(
@@ -204,40 +150,47 @@ async function getFinalAnswer(
   return { question: question, data };
 }
 
-export async function processInput(input: { question: string } []): Promise < string > {
+export async function processInput(
+  searchResults: any[] | undefined,
+  question: string
+): Promise<string> {
   try {
-    const question = input[0].question;
-
-    const extractedKeywords = await extractKeywords(question);
-
-    const keywords = extractedKeywords === "" ? question : extractedKeywords;
-
-    const searchResults = await extractESresults(keywords, question)
-
     if (!searchResults) {
-      let output_string: string = `I am not able to find an answer to this question. So please rephrase your question and ask again.`
+      let output_string: string = `I am not able to find an answer to this question. So please rephrase your question and ask again.`;
       return output_string;
     } else {
+      const intermediateContent: (CustomContent | null)[] = searchResults
+      .map((result: Result) => {
+        let results = result._source
+        const isQuestionOnStackExchange =
+        results.type === "question" &&
+        results.url.includes("stackexchange");
+        const isMarkdown = results.body_type === "markdown";
+        const snippet = isMarkdown
+        ? concatenateTextFields(results.body)
+        : results.body;
+        return isQuestionOnStackExchange
+        ? null
+        : {
+          title: results.title,
+          snippet: snippet,
+          link: results.url,
+        };
+      });
 
-      const extractedContent = searchResults.map((result: Result) => {
-        const isQuestionOnStackExchange = result.type?.raw === "question" && result.url?.raw.includes("stackexchange");
-        const isMarkdown = result.body_type.raw === "markdown";
-        const snippet = isMarkdown ? concatenateTextFields(result.body.raw) : result.body.raw;
+      const deduplicatedContent = removeDuplicatesByID(intermediateContent);
 
-        return isQuestionOnStackExchange ?
-          null : {
-            title: result.title.raw,
-            snippet: snippet,
-            link: result.url.raw,
-          };
-      }).filter((item: Result | null) => item !== null);
+      const extractedContent: CustomContent[] = deduplicatedContent.filter(
+        (item: CustomContent | null) => item !== null
+        ) as CustomContent[];
 
-      const cleanedContent = extractedContent.slice(0, 6).map((content: Content) => ({
-        title: cleanText(content.title),
-        snippet: cleanText(content.snippet),
-        link: content.link,
-      }));
-
+      const cleanedContent = extractedContent
+        .slice(0, 6)
+        .map((content) => ({
+          title: cleanText(content.title),
+          snippet: cleanText(content.snippet),
+          link: content.link,
+        }));
 
       const cleanedTextWithLink = cleanedContent.map((content: Content) => ({
         cleaned_text: content.snippet,

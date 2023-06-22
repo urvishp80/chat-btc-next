@@ -39,12 +39,12 @@ interface FeedbackStatus {
 
 function formatDate(date: Date) {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0'); // Months are 0-based, so we need to add 1
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  const milliseconds = String(date.getMilliseconds()).padStart(3, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0"); // Months are 0-based, so we need to add 1
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  const milliseconds = String(date.getMilliseconds()).padStart(3, "0");
 
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
 }
@@ -155,7 +155,25 @@ export default function Home() {
     return data;
   };
 
+
+  const fetchESResult = async (query: string) => {
+    const response = await fetch("/api/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        inputs:
+          {
+            question: query
+          },
+      }),
+    });
+    return response.json(); // Add this line
+  };
   const fetchResult = async (query: string) => {
+    const errMessage = "Something went wrong. Try again later";
+    const searchResults = await fetchESResult(query); // Remove ": Response" type here
     const response = await fetch("/api/chat", {
       method: "POST",
       headers: {
@@ -165,11 +183,15 @@ export default function Home() {
         inputs: [
           {
             question: query,
+            searchResults: searchResults,
           },
         ],
       }),
     });
-    return response;
+    if (!response.ok) {
+      throw new Error(errMessage);
+    }
+    return response; // Add this line to correctly access the output
   };
 
   const handleSubmit = async (e: React.FormEvent, prompt?: string) => {
@@ -225,7 +247,7 @@ export default function Home() {
       let question = userInput;
       let answer = finalAnswerWithLinks;
       let uniqueIDD = uuid;
-      let dateString = "15-06-2023"; // DD-MM-YY
+      let dateString = "22-06-2023"; // DD-MM-YY
       let timeString = "00:00:00";
 
       const dateTimeString = dateString.split("-").reverse().join("-") + "T" + timeString;

@@ -21,6 +21,10 @@ module.exports = {
     ES_URL:process.env.ES_URL,
     ES_AUTHORIZATION_TOKEN:process.env.ES_AUTHORIZATION_TOKEN,
     OPENAI_API_KEY:process.env.OPENAI_API_KEY,
+    ES_CLOUD_ID:process.env.ES_CLOUD_ID,
+    ES_USERNAME:process.env.ES_USERNAME,
+    ES_PASSWORD:process.env.ES_PASSWORD,
+    ES_INDEX:process.env.ES_INDEX,
   },
   publicRuntimeConfig: {
     SUPABASE_URL: process.env.SUPABASE_URL,
@@ -32,5 +36,9 @@ module.exports = {
     ES_URL:process.env.ES_URL,
     ES_AUTHORIZATION_TOKEN:process.env.ES_AUTHORIZATION_TOKEN,
     OPENAI_API_KEY:process.env.OPENAI_API_KEY,
+    ES_CLOUD_ID:process.env.ES_CLOUD_ID,
+    ES_USERNAME:process.env.ES_USERNAME,
+    ES_PASSWORD:process.env.ES_PASSWORD,
+    ES_INDEX:process.env.ES_INDEX,
   },
 }
