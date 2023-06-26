@@ -313,7 +313,7 @@ export default function Home() {
     <>
       <Head>
         <title>Chat BTC</title>
-        <meta name="description" content="Your technical bitcoin copilot" />
+        <meta name="description" content="Your technical bitcoin companion" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/bitcoin.svg" />
       </Head>
