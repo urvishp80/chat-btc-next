@@ -30,31 +30,36 @@ interface SummaryData {
   cleaned_text: string;
 }
 
-function concatenateTextFields(data: any): string {
+function concatenateTextFields(data: string | ElementType[]): string {
   let concatenatedText = "";
-  try {
-    // json data
-    const element = JSON.parse(data) as ElementType[];
-    element.forEach((element: ElementType) => {
-      if (element.type === "paragraph") {
+
+  let elementArray: ElementType[];
+
+  // Check whether data is JSON string
+  if(typeof data === "string") {
+    try {
+      elementArray = JSON.parse(data);
+    }
+    catch(e) {
+      // If it's not a JSON string. Then, consider the whole string as text.
+      return data;
+    }
+  } else {
+    // If data is already an array
+    elementArray = data;
+  }
+
+  // If data is an array of `ElementType`
+  elementArray.forEach((element: ElementType) => {
+    if(element.type === "paragraph") {
         concatenatedText += element.text + " ";
-      } else if (element.type === "heading") {
+    } else if(element.type === "heading") {
         concatenatedText += "\n\n" + element.text + "\n\n";
-      }
-    });
-    return concatenatedText.trim();
-  } catch (err) {
-    // array data
-    (data as ElementType[]).forEach((element: ElementType) => {
-      if (element.type === "paragraph") {
-        concatenatedText += element.text + " ";
-      } else if (element.type === "heading") {
-        concatenatedText += "\n\n" + element.text + "\n\n";
-      }
-    });
+    }
+  });
     return concatenatedText.trim();
   }
-}
+
 
 function cleanText(text: string): string {
   text = text.replace(/[^\w\s.]/g, "").replace(/\s+/g, " ");
@@ -111,6 +116,11 @@ async function SummaryGenerate(question: string, ans: string): Promise<string> {
           body: JSON.stringify(payload),
         }
       );
+      if (!response.ok) {
+        // if response is not ok (status code is not 2xx), throw an error to handle it in the catch block
+        console.log(response);
+        return "I am not able to provide you with a proper answer to the question, but you can follow up with the links provided to find the answer on your own. Sorry for the inconvenience.";
+      }
       const jsonResponse = await response.json();
       return jsonResponse?.choices?.[0]?.message?.content || "";
     } catch (error) {

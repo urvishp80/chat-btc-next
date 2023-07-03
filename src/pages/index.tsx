@@ -171,6 +171,14 @@ export default function Home() {
     });
     return response.json(); // Add this line
   };
+
+  const errorMessages = [
+    'I am not able to find an answer to this question. So please rephrase your question and ask again.',
+    'The system is overloaded with requests, can you please ask your question in 5 seconds again? Thank you!',
+    'I am not able to provide you with a proper answer to the question, but you can follow up with the links provided to find the answer on your own. Sorry for the inconvenience.',
+    'Currently server is overloaded with API calls, please try again later.'
+   ];
+
   const fetchResult = async (query: string) => {
     const errMessage = "Something went wrong. Try again later";
     const searchResults = await fetchESResult(query); // Remove ": Response" type here
@@ -247,29 +255,37 @@ export default function Home() {
       let question = userInput;
       let answer = finalAnswerWithLinks;
       let uniqueIDD = uuid;
-      let dateString = "22-06-2023"; // DD-MM-YY
+      let dateString = "03-07-2023"; // DD-MM-YY
       let timeString = "00:00:00";
 
       const dateTimeString = dateString.split("-").reverse().join("-") + "T" + timeString;
       const dateObject = new Date(dateTimeString);
       const formattedDateTime = formatDate(dateObject);
 
-      // let date_ob = new Date();
-      let payload = {
-        uniqueId: uniqueIDD,
-        question: question,
-        answer: answer,
-        rating: null,
-        createdAt: new Date().toISOString(),
-        updatedAt: null,
-        releasedAt: formattedDateTime
-      };
-      //mongodb database
-      // await addDocumentToMongoDB(payload);
-
-      //supabase database
-      await SupaBaseDatabase.getInstance().insertData(payload);
-
+      if (!errorMessages.includes(answer)) {
+        let payload = {
+          uniqueId: uniqueIDD,
+          question: question,
+          answer: answer,
+          rating: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: null,
+          releasedAt: formattedDateTime
+        };
+        await SupaBaseDatabase.getInstance().insertData(payload);
+      } else {
+        // If answer contains error messages, only add the question to DB
+        let payload = {
+          uniqueId: uniqueIDD,
+          question: question,
+          answer: null, // Set answer as null
+          rating: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: null,
+          releasedAt: formattedDateTime
+        };
+        await SupaBaseDatabase.getInstance().insertData(payload);
+      }
       await updateMessages(finalAnswerWithLinks, uuid);
     } catch (err: any) {
       setMessages((prevMessages) => [
