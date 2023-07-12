@@ -27,12 +27,12 @@ export class SupaBaseDatabase {
     }
   }
   async insertData(payload: any) {
+    payload.question = payload.question.toLowerCase();
     const { data, error } = await supabase.from(DB_NAME).insert([payload]);
-
     if (error) {
       console.error("Error inserting Q&A:", error);
     } else {
-      console.log("Q&A inserted:", data);
+      console.log("Q&A inserted.");
     }
   }
   async addFeedback(payload: FeedbackPayload) {
@@ -53,5 +53,20 @@ export class SupaBaseDatabase {
       console.log("Q&A rating updated:", data);
     }
     return { data, error, status };
+  }
+  async getAnswerByQuestion(question: string) {
+    const { data, error } = await supabase
+      .from(DB_NAME)
+      .select("answer, createdAt") // specify the column also get created_at
+      .eq('question', question); // filter rows by question
+
+    if (error) {
+      console.error("Error fetching answer:", error);
+      return null;
+    } else {
+      // Data can be an array of objects. Order data by created_at timestamp in descending order
+      const orderedData = data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return orderedData;
+    }
   }
 }
