@@ -55,18 +55,23 @@ export class SupaBaseDatabase {
     return { data, error, status };
   }
   async getAnswerByQuestion(question: string) {
+    const oneDayBefore = new Date();
+    oneDayBefore.setDate(oneDayBefore.getDate() - 1);
     const { data, error } = await supabase
-      .from(DB_NAME)
-      .select("answer, createdAt") // specify the column also get created_at
-      .eq('question', question); // filter rows by question
+    .from(DB_NAME)
+    .select("answer, createdAt")
+    .eq('question', question);
 
     if (error) {
       console.error("Error fetching answer:", error);
       return null;
     } else {
-      // Data can be an array of objects. Order data by created_at timestamp in descending order
-      const orderedData = data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      return orderedData;
+      // filter data where createdAt is one day before
+      const filteredData = data.filter(d => new Date(d.createdAt) >= oneDayBefore);
+      // order filtered data
+      const orderedData = filteredData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      // Here we return null if no data found or orderedData if found
+      return orderedData.length > 0 ? orderedData : null;
     }
   }
 }
