@@ -28,6 +28,7 @@ export class SupaBaseDatabase {
   }
   async insertData(payload: any) {
     payload.question = payload.question.toLowerCase();
+    payload.author_name = payload.author_name.toLowerCase();
     const { data, error } = await supabase.from(DB_NAME).insert([payload]);
     if (error) {
       console.error("Error inserting Q&A:", error);
@@ -54,13 +55,20 @@ export class SupaBaseDatabase {
     }
     return { data, error, status };
   }
-  async getAnswerByQuestion(question: string) {
+  async getAnswerByQuestion(question: string, author?: string) {
     const oneDayBefore = new Date();
     oneDayBefore.setDate(oneDayBefore.getDate() - 1);
-    const { data, error } = await supabase
-    .from(DB_NAME)
-    .select("answer, createdAt")
-    .eq('question', question);
+    let query = supabase
+      .from(DB_NAME)
+      .select("answer, createdAt")
+      .eq('question', question);
+
+      // If author exists, add .eq('author_name', author) to the query
+      if(author){
+          query = query.eq('author_name', author);
+      }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching answer:", error);

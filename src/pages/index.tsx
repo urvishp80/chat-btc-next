@@ -47,9 +47,10 @@ function createReadableStream(text: string) {
   return readable;
 }
 
-const getCachedAnswer = async (question: string) => {
+const getCachedAnswer = async (question: string, author?: string) => {
   question = question.toLowerCase();
-  const answers = await SupaBaseDatabase.getInstance().getAnswerByQuestion(question);
+  author = author?.toLocaleLowerCase();
+  const answers = await SupaBaseDatabase.getInstance().getAnswerByQuestion(question, author);
 
   if (!answers || answers.length === 0) {
     console.error("Error fetching answer: No answers found.");
@@ -248,7 +249,7 @@ export default function Home() {
 
     try {
 
-      const cachedAnswer = await getCachedAnswer(query);
+      const cachedAnswer = await getCachedAnswer(query, author);
       let data = null;
       if (!cachedAnswer) {
         const response: Response = await fetchResult(query, author);
@@ -285,9 +286,10 @@ export default function Home() {
       }
 
       let question = query;
+      let author_name = author?.toLocaleLowerCase();
       let answer = finalAnswerWithLinks;
       let uniqueIDD = uuid;
-      let dateString = "12-07-2023"; // DD-MM-YY
+      let dateString = "13-07-2023"; // DD-MM-YY
       let timeString = "00:00:00";
 
       const dateTimeString =
@@ -300,6 +302,7 @@ export default function Home() {
           uniqueId: uniqueIDD,
           question: question,
           answer: answer,
+          author_name: author_name,
           rating: null,
           createdAt: new Date().toISOString(),
           updatedAt: null,
@@ -312,6 +315,7 @@ export default function Home() {
           uniqueId: uniqueIDD,
           question: question,
           answer: null, // Set answer as null
+          author_name: author_name,
           rating: null,
           createdAt: new Date().toISOString(),
           updatedAt: null,
